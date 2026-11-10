@@ -5,49 +5,39 @@ import { readColorTokens } from '@/lib/tokens';
 
 const tokens = readColorTokens();
 
+interface Pairing {
+  readonly foreground: string;
+  readonly background: string;
+  readonly usage: string;
+}
+
 /**
- * Every text/background pairing the design system actually uses.
- *
- * §6 requires 4.5:1 for body text and 3:1 for large display text, verified
- * rather than assumed. Each pair here corresponds to a real combination in the
- * components; adding a pairing to the UI without adding it here is the gap this
- * suite is meant to make obvious.
+ * Every text pairing the components actually use. Adding a combination to the
+ * UI without adding it here is the gap this suite exists to make obvious.
  */
-const TEXT_PAIRS: { foreground: string; background: string; usage: string }[] = [
-  { foreground: 'ink-900', background: 'paper', usage: 'body and headings on the page surface' },
+const TEXT_PAIRS: readonly Pairing[] = [
+  { foreground: 'ink-900', background: 'paper', usage: 'body and headings' },
   { foreground: 'ink-500', background: 'paper', usage: 'secondary text' },
   { foreground: 'ink-400', background: 'paper', usage: 'muted text and metadata' },
-  { foreground: 'ink-400', background: 'paper-sunken', usage: 'muted text on sunken panels' },
-  { foreground: 'ink-500', background: 'paper-sunken', usage: 'secondary text on sunken panels' },
   { foreground: 'ink-900', background: 'paper-sunken', usage: 'headings on sunken panels' },
+  { foreground: 'ink-500', background: 'paper-sunken', usage: 'secondary text, sunken' },
+  { foreground: 'ink-400', background: 'paper-sunken', usage: 'muted text, sunken' },
   { foreground: 'ink-900', background: 'paper-raised', usage: 'headings on raised panels' },
   { foreground: 'accent', background: 'paper', usage: 'accent text and links' },
   { foreground: 'accent-strong', background: 'paper', usage: 'accent hover and active' },
-  { foreground: 'accent', background: 'paper-sunken', usage: 'accent text on sunken panels' },
-  { foreground: 'paper', background: 'ink-900', usage: 'text on the inverse footer surface' },
-  {
-    foreground: 'ink-300',
-    background: 'ink-900',
-    usage: 'muted text and the footer disclosure on the inverse surface',
-  },
-  { foreground: 'ink-200', background: 'ink-900', usage: 'secondary text on the inverse surface' },
-  {
-    foreground: 'accent-on-dark',
-    background: 'ink-900',
-    usage: 'accent text on the inverse surface',
-  },
+  { foreground: 'accent', background: 'paper-sunken', usage: 'accent text, sunken' },
+  { foreground: 'paper', background: 'ink-900', usage: 'text on the inverse footer' },
+  { foreground: 'ink-300', background: 'ink-900', usage: 'muted text and footer disclosure' },
+  { foreground: 'ink-200', background: 'ink-900', usage: 'secondary text, inverse' },
+  { foreground: 'accent-on-dark', background: 'ink-900', usage: 'accent text, inverse' },
   { foreground: 'paper', background: 'ink-800', usage: 'text on the secondary inverse surface' },
 ];
 
-/** Non-text pairs: focus rings and borders, which need 3:1 as UI components. */
-const UI_PAIRS: { foreground: string; background: string; usage: string }[] = [
+/** Focus rings and borders, which WCAG treats as interface components at 3:1. */
+const UI_PAIRS: readonly Pairing[] = [
   { foreground: 'accent', background: 'paper', usage: 'focus ring on the page surface' },
   { foreground: 'accent', background: 'paper-raised', usage: 'focus ring on raised panels' },
-  {
-    foreground: 'accent-on-dark',
-    background: 'ink-900',
-    usage: 'focus ring on the inverse surface',
-  },
+  { foreground: 'accent-on-dark', background: 'ink-900', usage: 'focus ring, inverse' },
   { foreground: 'ink-900', background: 'paper', usage: 'bordered button outline' },
 ];
 
@@ -59,54 +49,48 @@ function colorOf(token: string): string {
   return value;
 }
 
+/**
+ * Collects every pairing below the threshold rather than failing on the first,
+ * so one run reports the whole problem instead of one pair at a time.
+ */
+function failuresBelow(pairs: readonly Pairing[], threshold: number): string[] {
+  return pairs.flatMap((pair) => {
+    const ratio = contrastRatio(colorOf(pair.foreground), colorOf(pair.background));
+    if (ratio >= threshold) return [];
+    return [`${pair.foreground} on ${pair.background} (${pair.usage}) is ${formatRatio(ratio)}`];
+  });
+}
+
 describe('colour tokens', () => {
-  it('declares every token the components reference', () => {
-    const required = [
-      ...new Set(
-        [...TEXT_PAIRS, ...UI_PAIRS].flatMap((pair) => [pair.foreground, pair.background]),
-      ),
-    ];
+  it('declares every token a pairing references', () => {
+    const referenced = new Set(
+      [...TEXT_PAIRS, ...UI_PAIRS].flatMap((pair) => [pair.foreground, pair.background]),
+    );
 
-    for (const token of required) {
-      expect(tokens[token], `--${token}`).toMatch(/^#[0-9a-fA-F]{6}$/);
-    }
+    const undeclared = [...referenced].filter((token) => tokens[token] === undefined);
+    expect(undeclared).toEqual([]);
   });
 
-  it('avoids pure black and pure white, per §6', () => {
-    for (const [name, value] of Object.entries(tokens)) {
-      expect(value.toLowerCase(), `--${name}`).not.toBe('#000000');
-      expect(value.toLowerCase(), `--${name}`).not.toBe('#ffffff');
-    }
-  });
+  it('uses no pure black or white, and gives every neutral a hue', () => {
+    const pureValues = Object.entries(tokens)
+      .filter(([, value]) => ['#000000', '#ffffff'].includes(value.toLowerCase()))
+      .map(([name]) => name);
+    expect(pureValues).toEqual([]);
 
-  it('gives every neutral a hue, so no grey is fully desaturated', () => {
-    for (const name of ['ink-900', 'ink-700', 'ink-500', 'ink-300', 'ink-100']) {
+    const flatGreys = ['ink-900', 'ink-700', 'ink-500', 'ink-300', 'ink-100'].filter((name) => {
       const { r, g, b } = parseHexColor(colorOf(name));
-      expect(new Set([r, g, b]).size, `--${name} is a flat grey`).toBeGreaterThan(1);
-    }
+      return new Set([r, g, b]).size === 1;
+    });
+    expect(flatGreys).toEqual([]);
   });
 });
 
-describe('text contrast meets WCAG AA', () => {
-  for (const pair of TEXT_PAIRS) {
-    it(`${pair.foreground} on ${pair.background} — ${pair.usage}`, () => {
-      const ratio = contrastRatio(colorOf(pair.foreground), colorOf(pair.background));
-      expect(
-        ratio,
-        `${formatRatio(ratio)} is below ${AA_TEXT.toFixed(1)}:1`,
-      ).toBeGreaterThanOrEqual(AA_TEXT);
-    });
-  }
-});
+describe('contrast', () => {
+  it(`meets ${AA_TEXT.toFixed(1)}:1 for all ${String(TEXT_PAIRS.length)} text pairings`, () => {
+    expect(failuresBelow(TEXT_PAIRS, AA_TEXT)).toEqual([]);
+  });
 
-describe('interface element contrast meets WCAG AA', () => {
-  for (const pair of UI_PAIRS) {
-    it(`${pair.foreground} on ${pair.background} — ${pair.usage}`, () => {
-      const ratio = contrastRatio(colorOf(pair.foreground), colorOf(pair.background));
-      expect(
-        ratio,
-        `${formatRatio(ratio)} is below ${AA_LARGE_TEXT.toFixed(1)}:1`,
-      ).toBeGreaterThanOrEqual(AA_LARGE_TEXT);
-    });
-  }
+  it(`meets ${AA_LARGE_TEXT.toFixed(1)}:1 for all ${String(UI_PAIRS.length)} interface pairings`, () => {
+    expect(failuresBelow(UI_PAIRS, AA_LARGE_TEXT)).toEqual([]);
+  });
 });

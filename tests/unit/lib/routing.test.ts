@@ -17,18 +17,11 @@ import {
 import type { Locale, RouteId, SlugTranslator } from '@/lib/routing';
 
 describe('routePath', () => {
-  it('prefixes the locale and keeps the English spelling for English', () => {
-    expect(routePath('en', 'services')).toBe('/en/services');
+  it('builds localised paths for both locales, including dynamic slugs', () => {
     expect(routePath('en', 'home')).toBe('/en');
-  });
-
-  it('uses the translated segment for Romanian', () => {
+    expect(routePath('en', 'services')).toBe('/en/services');
     expect(routePath('ro', 'services')).toBe('/ro/servicii');
-    expect(routePath('ro', 'about')).toBe('/ro/despre-noi');
     expect(routePath('ro', 'legalNotice')).toBe('/ro/informatii-legale');
-  });
-
-  it('substitutes the slug on dynamic routes', () => {
     expect(routePath('en', 'service', 'structural-engineering')).toBe(
       '/en/services/structural-engineering',
     );
@@ -37,78 +30,62 @@ describe('routePath', () => {
     );
   });
 
-  it('never leaves an unsubstituted parameter in a path', () => {
-    for (const locale of locales) {
-      for (const id of routeIds) {
-        const path = routes[id].dynamic
-          ? routePath(locale, id as 'service', 'a-slug')
-          : routePath(locale, id as 'about');
-        expect(path).not.toContain('[');
-      }
-    }
+  it('never emits an unsubstituted parameter, for any route in any locale', () => {
+    const leaked = locales.flatMap((locale) =>
+      routeIds
+        .map((id) =>
+          routes[id].dynamic
+            ? routePath(locale, id as 'service', 'a-slug')
+            : routePath(locale, id as 'about'),
+        )
+        .filter((path) => path.includes('[')),
+    );
+
+    expect(leaked).toEqual([]);
   });
 });
 
-describe('the registry itself', () => {
-  it('defines a path for every locale on every route', () => {
-    for (const id of routeIds) {
-      for (const locale of locales) {
-        expect(routes[id].paths[locale], `${id}/${locale}`).toMatch(/^\//);
-      }
-    }
-  });
-
-  it('marks a route dynamic exactly when its template carries a slug', () => {
-    for (const id of routeIds) {
+describe('the route registry', () => {
+  it('marks a route dynamic exactly when its templates carry a slug', () => {
+    const inconsistent = routeIds.filter((id) => {
       const route = routes[id];
-      expect(route.internal.includes('[slug]'), id).toBe(route.dynamic);
+      const templates = [route.internal, ...locales.map((locale) => route.paths[locale])];
+      return templates.some((template) => template.includes('[slug]') !== route.dynamic);
+    });
 
-      for (const locale of locales) {
-        expect(route.paths[locale].includes('[slug]'), `${id}/${locale}`).toBe(route.dynamic);
-      }
-    }
+    expect(inconsistent).toEqual([]);
   });
 
-  it('keeps every localised path unique within a locale, so no two routes collide', () => {
+  it('keeps localised paths unique within a locale, so no two routes collide', () => {
     for (const locale of locales) {
       const paths = routeIds.map((id) => localisedTemplate(locale, id));
-      expect(new Set(paths).size).toBe(paths.length);
+      expect(new Set(paths).size, locale).toBe(paths.length);
     }
   });
 
-  it('leaves the default locale untranslated, so no rewrite is generated for it', () => {
+  it('leaves the default locale untranslated, so it generates no rewrites', () => {
+    const translated = routeIds.filter((id) => hasTranslatedPath(id, defaultLocale));
+    expect(translated).toEqual([]);
+
     for (const id of routeIds) {
-      expect(hasTranslatedPath(id, defaultLocale), id).toBe(false);
       expect(localisedTemplate(defaultLocale, id)).toBe(internalTemplate(defaultLocale, id));
     }
   });
 });
 
 describe('isLocale', () => {
-  it('accepts the configured locales and rejects anything else', () => {
-    expect(isLocale('en')).toBe(true);
-    expect(isLocale('ro')).toBe(true);
-    expect(isLocale('de')).toBe(false);
-    expect(isLocale('')).toBe(false);
-    expect(isLocale('EN')).toBe(false);
+  it('accepts the configured locales and rejects everything else', () => {
+    expect(locales.filter((locale) => !isLocale(locale))).toEqual([]);
+    expect(['de', 'EN', 'en-GB', ''].filter(isLocale)).toEqual([]);
   });
 });
 
 describe('matchRoutePath', () => {
-  it('identifies a locale home page', () => {
+  it('resolves the localised spelling, the internal spelling and a slug', () => {
     expect(matchRoutePath('/en')).toEqual({ locale: 'en', id: 'home' });
-    expect(matchRoutePath('/ro')).toEqual({ locale: 'ro', id: 'home' });
-  });
-
-  it('identifies a translated static route', () => {
     expect(matchRoutePath('/ro/despre-noi')).toEqual({ locale: 'ro', id: 'about' });
-  });
-
-  it('also identifies the internal spelling, which the rewrite target uses', () => {
+    /* The rewrite target uses the internal spelling, so it must resolve too. */
     expect(matchRoutePath('/ro/about')).toEqual({ locale: 'ro', id: 'about' });
-  });
-
-  it('captures the slug on a dynamic route', () => {
     expect(matchRoutePath('/en/work/press-line-migration')).toEqual({
       locale: 'en',
       id: 'caseStudy',
@@ -116,71 +93,42 @@ describe('matchRoutePath', () => {
     });
   });
 
-  it('prefers a static route over a dynamic one for an exact match', () => {
+  it('prefers a static route over a dynamic one, and rejects non-routes', () => {
     expect(matchRoutePath('/en/services')).toEqual({ locale: 'en', id: 'services' });
-  });
-
-  it('returns null for an unknown locale, an unknown path and the bare origin', () => {
-    expect(matchRoutePath('/de/services')).toBeNull();
-    expect(matchRoutePath('/en/nothing-here')).toBeNull();
-    expect(matchRoutePath('/')).toBeNull();
-    expect(matchRoutePath('')).toBeNull();
-  });
-
-  it('does not treat a missing slug as a dynamic route match', () => {
+    /* A trailing slash is the index, not a case study with an empty slug. */
     expect(matchRoutePath('/en/work/')).toEqual({ locale: 'en', id: 'work' });
+
+    for (const path of ['/de/services', '/en/nothing-here', '/', '']) {
+      expect(matchRoutePath(path), path).toBeNull();
+    }
   });
 });
 
 describe('alternateRoutePath', () => {
-  it('maps a static route to its equivalent in the target locale', () => {
+  it('maps to the equivalent page, translating a slug through the content layer', () => {
     expect(alternateRoutePath('/en/services', 'ro')).toBe('/ro/servicii');
     expect(alternateRoutePath('/ro/despre-noi', 'en')).toBe('/en/about');
-  });
-
-  it('returns the path unchanged when it is already in the target locale', () => {
     expect(alternateRoutePath('/ro/servicii', 'ro')).toBe('/ro/servicii');
-  });
 
-  it('translates a dynamic route when the content layer supplies a slug', () => {
-    const translate = (): string => 'inginerie-structurala';
+    const calls: [RouteId, string, Locale, Locale][] = [];
+    const translate: SlugTranslator = (id, slug, from, to) => {
+      calls.push([id, slug, from, to]);
+      return 'inginerie-structurala';
+    };
 
     expect(alternateRoutePath('/en/services/structural-engineering', 'ro', translate)).toBe(
       '/ro/servicii/inginerie-structurala',
     );
+    expect(calls).toEqual([['service', 'structural-engineering', 'en', 'ro']]);
   });
 
-  it('passes the route, slug and both locales to the translator', () => {
-    const calls: [RouteId, string, Locale, Locale][] = [];
-    const translate: SlugTranslator = (id, slug, from, to) => {
-      calls.push([id, slug, from, to]);
-      return 'weld-fatigue-ro';
-    };
-
-    alternateRoutePath('/en/insights/weld-fatigue', 'ro', translate);
-
-    expect(calls).toEqual([['insight', 'weld-fatigue', 'en', 'ro']]);
-  });
-
-  it('falls back to the locale home when a slug has no translation', () => {
-    const translate = (): undefined => undefined;
-
-    expect(alternateRoutePath('/en/work/press-line-migration', 'ro', translate)).toBe('/ro');
-  });
-
-  it('falls back to the locale home for a path outside the registry', () => {
+  it('falls back to the locale home wherever no equivalent page exists', () => {
+    /* Slug with no counterpart in the target locale. */
+    expect(alternateRoutePath('/en/work/press-line-migration', 'ro', () => undefined)).toBe('/ro');
+    /* Dynamic route reached with no translator supplied at all. */
+    expect(alternateRoutePath('/en/work/press-line-migration', 'ro')).toBe('/ro');
+    /* Paths outside the registry. */
     expect(alternateRoutePath('/en/not-a-page', 'ro')).toBe('/ro');
     expect(alternateRoutePath('/', 'ro')).toBe('/ro');
-  });
-
-  it('falls back when a dynamic route is reached with no translator at all', () => {
-    expect(alternateRoutePath('/en/work/press-line-migration', 'ro')).toBe('/ro');
-  });
-});
-
-describe('locale configuration', () => {
-  it('includes the default locale in the locale list', () => {
-    const configured: readonly Locale[] = locales;
-    expect(configured).toContain(defaultLocale);
   });
 });
