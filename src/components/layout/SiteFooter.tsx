@@ -30,15 +30,15 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
   return (
     <footer data-surface="inverse" className="mt-auto bg-surface-inverse text-inverse-muted">
       <Container width="bleed">
-        <div className="grid grid-cols-1 gap-8 py-9 md:grid-cols-12 md:gap-6">
-          <div className="md:col-span-5">
+        <div className="grid grid-cols-1 gap-8 py-9 lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-5">
             <Wordmark locale={locale} className="text-inverse" />
             <p className="mt-4 max-w-measure-narrow text-caption leading-relaxed">
               {company.positioning[locale]}
             </p>
           </div>
 
-          <div className="md:col-span-3">
+          <div className="lg:col-span-3">
             <h2 className="text-micro font-medium tracking-eyebrow text-inverse uppercase">
               {t('officeHeading')}
             </h2>
@@ -51,7 +51,7 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
             </address>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <h2 className="text-micro font-medium tracking-eyebrow text-inverse uppercase">
               {t('contactHeading')}
             </h2>
@@ -75,7 +75,7 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
             </ul>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <h2 className="text-micro font-medium tracking-eyebrow text-inverse uppercase">
               {t('legalHeading')}
             </h2>
@@ -97,7 +97,7 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-rule-inverse py-6 text-micro md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 border-t border-rule-inverse py-6 text-micro lg:flex-row lg:items-center lg:justify-between">
           <p>{t('copyright', { year, company: company.legalName })}</p>
           <p className="text-ink-300">{t('disclosure')}</p>
         </div>

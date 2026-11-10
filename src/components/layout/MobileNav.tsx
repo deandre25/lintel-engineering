@@ -80,9 +80,14 @@ export function MobileNav({ locale, items, openLabel, closeLabel, navLabel }: Mo
         onClick={() => {
           setIsOpen((open) => !open);
         }}
-        className="inline-flex items-center gap-2 py-2 text-micro font-medium tracking-wide text-primary uppercase"
+        className="inline-flex items-center gap-2 py-2 text-primary"
       >
-        {isOpen ? closeLabel : openLabel}
+        {/*
+         * The label is the accessible name but is not painted: at 390px two
+         * words plus the wordmark and the locale switcher do not fit the
+         * gutter, and the label wrapped to two lines.
+         */}
+        <span className="sr-only">{isOpen ? closeLabel : openLabel}</span>
         <span aria-hidden="true" className="relative block h-2 w-4">
           <span
             className={`absolute left-0 block h-px w-4 bg-current transition-transform ${
