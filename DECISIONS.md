@@ -341,3 +341,44 @@ explicit statement that Lintel Engineering is fictional and that this site is a
 demonstration project appears as the first section of the legal notice in both
 locales, in the footer of every page, and in the README. It is not softened and
 it is not implied.
+
+## Phase 4 — Sections and pages
+
+### 2026-11-10 — Two-column layouts engage at 1024px, not 768px
+
+The sections were first written with `md:` (768px) splits. At exactly 768 the
+hero gave its display type a 435px column and the lead a 5/12 tower, and the
+explanatory sections cut the measure to roughly 48 characters. Every two-column
+split now starts at `lg:` (1024px), so tablet width is a single column at full
+measure. Caught by screenshotting 768 rather than by any test.
+
+### 2026-11-10 — Sections take render props for their links
+
+§7 requires section components to receive typed content and know nothing about
+routing or locale. Links inside a section are therefore passed in from the page,
+which is the only layer allowed to know both. `DisciplineList` and
+`CaseStudyGrid` take `renderServiceLink` and `renderLink`; the sections
+themselves import nothing from the routing layer.
+
+### 2026-11-10 — Page params are typed as strings and narrowed
+
+Typing a page's `params` as `{ locale: Locale }` is a lie: Next passes whatever
+is in the URL. It held until `/de` was requested, when the content lookup
+returned `undefined` and the page threw a 500 where it should have answered 404.
+Pages now take `{ locale: string }` and narrow through `requireLocale`, which
+calls `notFound()`. Caught by the existing e2e test, which asserted 404 and got 500.
+
+### 2026-11-10 — `readColorTokens` takes no path argument
+
+The function had an optional path parameter that was only ever used by its
+default. Next's static analysis could not prove what was being read and traced
+the entire project into the server output, warning that this bloats a
+deployment. Reading the module constant directly removes the warning and the
+parameter nobody used.
+
+### 2026-11-10 — The inverse button variant
+
+The closing section sits on `--ink-900`, where the primary button's dark fill is
+invisible. A fourth variant inverts it — a paper fill with an `--ink-900` label
+at 17.2:1 — and its disabled state uses `--ink-600` with `--ink-200` at 7.1:1.
+Both pairings are in the asserted contrast list.
