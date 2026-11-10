@@ -272,3 +272,72 @@ the GitHub account is `andrii.deineka.fe@gmail.com`, which is being verified
 there so the existing history links to the profile. History is therefore not
 rewritten again — rewriting it would change every commit hash to fix something
 GitHub resolves on its own once the address is verified.
+
+## Phase 3 — Content
+
+### 2026-11-10 — Editorial rules are enforced by the content schema
+
+§5 bans a list of vocabulary and requires sentence-case headings without
+terminal punctuation; §9 requires meta descriptions between 140 and 160
+characters. These are checked in `src/content/schema.ts` rather than left to
+review, so a phrase cannot reach a page through a late edit.
+
+The length rule earned its place immediately: it rejected six descriptions
+across the two locales that read fine and were between 131 and 139 characters.
+None would have been noticed by eye.
+
+The banned-phrase check is a substring match with deliberately narrow
+boundaries — "robust solutions" is banned, "robust" describing a weld is not —
+because a check that produces false positives gets disabled.
+
+### 2026-11-10 — Entities carry a locale-independent id alongside a localised slug
+
+Slugs are localised, so they cannot link a page to its translation. Each
+service, case study and article therefore carries an `id` as well as a `slug`,
+and the English slug is used as the id: it is already unique and stable, and it
+keeps the registry readable.
+
+`translateSlug` in `src/content/registry.ts` resolves a localised slug to its
+counterpart through that id, and is the function `alternateRoutePath` takes. It
+is what makes the language switcher land on the same article rather than on the
+locale home, which §8 calls out as the part most implementations skip.
+
+Cross-references — `service.relatedCaseStudy` and `caseStudy.services` — are
+stored as ids rather than localised slugs for the same reason.
+
+### 2026-11-10 — Cross-module integrity is tested, not validated at build time
+
+Zod validates each content module in isolation, which cannot see that a
+Romanian case study references a service that does not exist or that the two
+locales have drifted apart. Those invariants are asserted in
+`tests/unit/content/integrity.test.ts`: identical entity ids across locales,
+unique slugs within a locale, slug translation round-tripping in both
+directions, cross-references resolving, every article attributed to somebody on
+the team page, and discipline headcounts summing to the company total.
+
+Seven tests, bringing the suite to 36. They were put in the suite rather than in
+the registry's module scope because a failing assertion in a test names the
+offending entity, while a thrown error at import time fails the build with a
+stack trace into a content file.
+
+### 2026-11-10 — Romanian is an adaptation, not a translation
+
+Where an English turn of phrase would not carry, it is replaced with a plain
+statement rather than calqued. Three places where the English leans on an
+idiom read differently in Romanian, and are listed in the Phase 3 report for a
+native speaker to confirm.
+
+Standards keep their published designations — Eurocod, EN ISO 13849, ISO 19650 —
+because translating a standard's name makes it unfindable.
+
+The README will state that a native speaker should review the Romanian before
+any real use, as §5 requires.
+
+### 2026-11-10 — The fictional-company statement is separate from declining to claim accreditation
+
+These were conflated in the Phase 3 copy review. Declining to claim
+certification makes the firm sound careful; it does not disclose anything. The
+explicit statement that Lintel Engineering is fictional and that this site is a
+demonstration project appears as the first section of the legal notice in both
+locales, in the footer of every page, and in the README. It is not softened and
+it is not implied.
