@@ -248,3 +248,164 @@
     }
   }
 }
+
+/*
+ * Long-form typography.
+ *
+ * Scoped to `.prose` and applied with the child combinator where possible, so
+ * nested components inside an article are not restyled by accident. Spacing is
+ * expressed as margin-top on following siblings rather than margin-bottom, so
+ * the first element in a prose block never introduces space above itself.
+ */
+@layer components {
+  .prose {
+    color: var(--text-secondary);
+    font-size: var(--text-body);
+    line-height: var(--leading-relaxed);
+  }
+
+  .prose > * + * {
+    margin-top: var(--space-5);
+  }
+
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+    text-wrap: balance;
+  }
+
+  .prose h2 {
+    font-size: var(--text-h3);
+  }
+
+  .prose h3 {
+    font-size: var(--text-h4);
+  }
+
+  .prose h4 {
+    font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  /* A heading after prose needs more space above it than below it. */
+  .prose > * + h2 {
+    margin-top: var(--space-8);
+  }
+
+  .prose > * + h3,
+  .prose > * + h4 {
+    margin-top: var(--space-7);
+  }
+
+  .prose strong {
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+  }
+
+  .prose a {
+    color: var(--text-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .prose a:hover {
+    color: var(--accent-strong);
+  }
+
+  .prose ul,
+  .prose ol {
+    padding-left: var(--space-5);
+  }
+
+  .prose ul {
+    list-style: none;
+  }
+
+  .prose ol {
+    list-style: decimal;
+  }
+
+  .prose li + li {
+    margin-top: var(--space-3);
+  }
+
+  .prose ol li::marker {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * A hairline dash rather than a bullet glyph: it matches the rules used for
+   * structure elsewhere, and reads as a drawing convention rather than decoration.
+   */
+  .prose ul > li {
+    position: relative;
+  }
+
+  .prose ul > li::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-5) * -1);
+    top: 0.75em;
+    width: var(--space-3);
+    height: 1px;
+    background-color: var(--rule-strong);
+  }
+
+  .prose blockquote {
+    border-left: 1px solid var(--accent);
+    padding-left: var(--space-5);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--text-body-lg);
+    line-height: var(--leading-snug);
+  }
+
+  .prose figcaption,
+  .prose small {
+    color: var(--text-muted);
+    font-size: var(--text-caption);
+  }
+
+  .prose code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--text-primary);
+  }
+
+  .prose hr {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-8);
+  }
+
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-caption);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prose th {
+    border-bottom: 1px solid var(--rule-strong);
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+    text-align: left;
+  }
+
+  .prose th,
+  .prose td {
+    padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  }
+
+  .prose td {
+    border-bottom: 1px solid var(--rule);
+  }
+}
