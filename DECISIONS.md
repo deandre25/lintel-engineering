@@ -157,3 +157,83 @@ than a root param, and `next/root-params` reported none, which would have forced
 the deprecated `requestLocale` API. Removing the passthrough makes the locale
 layout the root layout and `locale` a typed root param, which is also what keeps
 every page statically rendered without per-page `setRequestLocale` calls.
+
+## Phase 2 — Design system
+
+### 2026-11-10 — Actions are buttons, navigation is links, and they share only styling
+
+`Button` renders a `<button>` and never an anchor; `ButtonLink` renders a link
+and never a button. They share `buttonClassName` so they look identical, but
+neither pretends to be the other. The alternative — one polymorphic component
+with an `as` prop — reliably produces anchors without `href` and buttons that
+navigate, which breaks Space versus Enter, middle-click and the context menu.
+
+`Button` also defaults `type` to `button` rather than `submit`, because a button
+inside a form with no explicit type submits it, which is the most common way a
+secondary control becomes an accidental submission.
+
+### 2026-11-10 — Disabled states use inert tokens, not opacity
+
+`opacity-50` composites an element's label and fill together against the page.
+On the primary button that lands at roughly 3.1:1, and it renders as a
+translucent grey blob beside hairline-bordered buttons. Disabled states are now
+explicit tokens — `--ink-200` fill with an `--ink-600` label at 7.1:1 — which
+stays on the palette and keeps the label readable.
+
+WCAG exempts inactive controls from contrast requirements, so axe never flagged
+this. §6 asks for every text pairing to be verified, so the disabled label is in
+the asserted pairing list like any other.
+
+### 2026-11-10 — `Field` passes attributes to the control instead of rendering it
+
+`Field` takes a function and calls it with `id`, `name`, `aria-describedby`,
+`aria-invalid` and `aria-required`. It therefore wires an input, a textarea and
+a select identically without knowing which it holds, and in Phase 6 the same
+object can be spread alongside `react-hook-form`'s `register()`.
+
+Two details are deliberate. `aria-describedby` points at the hint and the error
+together, so the error supplements the guidance rather than replacing it. The
+`aria-live` region is always mounted, including while the field is valid:
+rendering it only on error means assistive technology is not yet observing the
+node when the message arrives, and the announcement is missed.
+
+### 2026-11-10 — `Disclosure` is a button, and the panel unmounts
+
+§11 asks for a real `button` with `aria-expanded` rather than a styled
+`<details>`, which cannot be animated reliably and whose open state is not
+exposed consistently across screen-reader pairings.
+
+The panel is unmounted when closed rather than hidden with CSS, so links inside
+it cannot be reached by Tab while invisible — the usual keyboard trap in an
+accordion. The accessibility suite scans the styleguide twice, once with a
+disclosure expanded, because a collapsed panel's contents are not in the DOM to
+be scanned.
+
+### 2026-11-10 — The contrast table and the contrast test read one list
+
+`src/lib/contrastPairs.ts` holds every pairing. The unit suite asserts the
+ratios and the styleguide prints them, both computed from
+`src/styles/tokens.css` at build time. Keeping two lists would let the published
+figures drift from the asserted ones, which is precisely how a contrast table
+stops being evidence and becomes decoration.
+
+### 2026-11-10 — The styleguide lives under `[locale]`
+
+§16 calls it `/styleguide`. The locale layout is the root layout and owns
+`<html>`, so a page outside `[locale]` would have no document shell. It is
+therefore `/en/styleguide`, registered in the route registry with
+`noindex: true`, which both emits `robots: noindex, nofollow` and excludes it
+from `indexableRouteIds()` and so from the sitemap in Phase 5.
+
+Its copy is English-only and written inline, outside the content modules and the
+message catalogue, because it is scaffolding read by developers rather than
+content read by visitors.
+
+### 2026-11-10 — Prose styles are hand-written CSS, not utilities
+
+Long-form typography has to reach markup that MDX generates, which cannot carry
+utility classes, so the rules live under `.prose` in `globals.css`. Written by
+hand rather than with a typography plugin: §2 rules out installing a component
+library, and the vertical rhythm is one of the things being demonstrated.
+Spacing is `margin-top` on following siblings, so the first element in a prose
+block never introduces space above itself.
