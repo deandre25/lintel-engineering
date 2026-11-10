@@ -10,13 +10,13 @@ import type { Home } from '../schema';
  * and a calqued idiom reads worse than no idiom at all.
  */
 export const home: Home = homeSchema.parse({
-  title: 'Expertiză inginerească pentru proiecte disputate tehnic',
+  title: 'Răspunsuri tehnice pentru proiecte blocate',
   description:
     'Consultanță inginerească independentă în Brașov: certificare structurală, retehnologizări industriale și evaluarea riscului tehnic pentru industrie.',
 
   hero: {
     eyebrow: 'Brașov, România',
-    heading: 'Expertiză inginerească pentru proiecte disputate tehnic',
+    heading: 'Răspunsuri tehnice pentru proiecte blocate',
     lead: 'Patruzeci și opt de oameni, într-un singur birou din Brașov. Producători, dezvoltatori și autorități de infrastructură ne aduc lucrările care s-au blocat: o structură care trebuie certificată, o linie de producție care trebuie mutată pe altă platformă de automatizare fără oprire, o achiziție al cărei risc tehnic trebuie cuantificat înainte de semnare.',
   },
 

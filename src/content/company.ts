@@ -113,7 +113,7 @@ export const company: Company = companySchema.parse({
 
   positioning: {
     en: 'Engineering judgement for projects that are technically contested',
-    ro: 'Expertiză inginerească pentru proiecte disputate tehnic',
+    ro: 'Răspunsuri tehnice pentru proiecte blocate',
   },
 
   shortDescription: {

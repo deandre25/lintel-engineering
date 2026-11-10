@@ -13,7 +13,7 @@ const aboutSchema = z.object({
 
 /** Romanian about page. Same four people, same credentials, adapted biographies. */
 export const about = aboutSchema.parse({
-  title: 'O firmă de 48 de oameni, chemată la jumătatea dificilă a întrebării',
+  title: 'O firmă de 48 de oameni, chemată când întrebarea devine dificilă',
   description:
     'Lintel Engineering, Brașov: înființată în 2009, 48 de oameni în trei discipline, independentă de constructori, furnizori și producători de echipamente.',
   intro:
