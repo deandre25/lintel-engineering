@@ -28,5 +28,114 @@
     "cookieSettings": "Setări cookie-uri",
     "copyright": "© {year} {company}. Toate drepturile rezervate.",
     "disclosure": "Lintel Engineering este o companie fictivă. Acest site este un proiect demonstrativ."
+  },
+  "common": {
+    "breadcrumbLabel": "Navigare",
+    "readMore": "Citește mai mult",
+    "backTo": "Înapoi la {page}",
+    "updated": "Actualizat la {date}",
+    "relatedWork": "Proiect asociat",
+    "allServices": "Toate serviciile",
+    "peopleInDiscipline": "{count, plural, one {# persoană} few {# persoane} other {# de persoane}}"
+  },
+  "services": {
+    "indexTitle": "Șase servicii, grupate în trei discipline",
+    "indexDescription": "Ce acoperă fiecare disciplină și care dintre cele șase servicii intră în ea.",
+    "whatWeDo": "Ce cuprinde activitatea",
+    "faqHeading": "Întrebări frecvente",
+    "cta": "Discutați un proiect cu noi"
+  },
+  "work": {
+    "indexTitle": "Patru proiecte, descrise prin constrângerea care le-a determinat",
+    "sector": "Sector",
+    "location": "Localizare",
+    "year": "An",
+    "duration": "Durată",
+    "client": "Client",
+    "servicesUsed": "Servicii implicate",
+    "cta": "Discutați un proiect similar"
+  },
+  "insights": {
+    "indexTitle": "Note despre probleme pe care le întâlnim destul de des încât să ne fi format o opinie",
+    "publishedOn": "Publicat la {date}",
+    "readingTime": "{minutes} min de citit",
+    "writtenBy": "Autor: {author}",
+    "topics": "Subiecte",
+    "backToIndex": "Toate analizele"
+  },
+  "about": {
+    "teamHeading": "Cine conduce lucrările",
+    "joined": "În firmă din {year}"
+  },
+  "careers": {
+    "positionsHeading": "Posturi deschise",
+    "location": "Localizare",
+    "commitment": "Tip de contract",
+    "experience": "Experiență",
+    "responsibilities": "Ce veți face",
+    "requirements": "Ce căutăm",
+    "offer": "Ce oferim",
+    "apply": "Aplicați pentru acest post",
+    "applyHint": "Aplicațiile ajung la șeful de disciplină, nu într-o adresă de recrutare."
+  },
+  "contact": {
+    "title": "Spuneți-ne unde s-a blocat proiectul",
+    "description": "Spuneți-ne unde s-a blocat proiectul și până când trebuie rezolvat. Răspundem în două zile lucrătoare, direct de la inginerul care ar conduce lucrarea.",
+    "formHeading": "Trimiteți-ne pe scurt situația",
+    "name": "Nume",
+    "company": "Companie",
+    "email": "E-mail",
+    "enquiryType": "Despre ce este vorba",
+    "enquiryPlaceholder": "Alegeți o disciplină",
+    "message": "Ce s-a blocat și până când trebuie rezolvat",
+    "messageHint": "Câteva propoziții sunt suficiente. Vă cerem planurile dacă avem nevoie de ele.",
+    "emailHint": "Răspunde un inginer, cu numele lui, nu o adresă comună.",
+    "consent": "Am citit politica de confidențialitate și sunt de acord să fiu contactat ca răspuns.",
+    "consentLink": "politica de confidențialitate",
+    "optional": "opțional",
+    "submit": "Trimiteți solicitarea",
+    "submitting": "Se trimite solicitarea",
+    "successHeading": "Am primit solicitarea dumneavoastră",
+    "successBody": "Răspundem în două zile lucrătoare, de la inginerul care ar conduce lucrarea. Dacă este urgent, sunați la {phone}.",
+    "failureHeading": "Solicitarea nu a fost trimisă",
+    "failureBody": "A apărut o eroare de partea noastră, nu a dumneavoastră. Încercați din nou peste câteva momente sau scrieți direct la {email}, iar mesajul ajunge în același loc.",
+    "errors": {
+      "nameRequired": "Scrieți-vă numele, ca să știm cui îi răspundem.",
+      "emailRequired": "Scrieți o adresă de e-mail, ca să vă putem răspunde.",
+      "emailInvalid": "Adresei îi lipsește semnul @ sau domeniul. Verificați-o și încercați din nou.",
+      "enquiryRequired": "Alegeți disciplina cea mai apropiată, ca solicitarea să ajungă la inginerul potrivit.",
+      "messageRequired": "Scrieți pe scurt despre ce este proiectul, ca să îl putem îndruma către disciplina potrivită.",
+      "messageTooShort": "Încă una-două propoziții ne-ar ajuta să îndrumăm corect solicitarea.",
+      "consentRequired": "Avem nevoie de acordul dumneavoastră ca să păstrăm mesajul și să vă răspundem.",
+      "tooFast": "Formularul a fost trimis mai repede decât poate scrie o persoană. Dacă nu sunteți un robot, așteptați un moment și trimiteți-l din nou."
+    }
+  },
+  "cookies": {
+    "heading": "Cookie-uri pe acest site",
+    "body": "Păstrăm un singur cookie, ca să reținem această alegere. Cookie-urile de analiză și de preferințe nu se încarcă dacă nu le acceptați, iar nimic de aici nu este folosit pentru publicitate.",
+    "acceptAll": "Accept toate",
+    "rejectAll": "Resping toate",
+    "manage": "Aleg categoriile",
+    "save": "Salvează alegerile",
+    "necessary": "Necesare",
+    "necessaryDescription": "Rețin această alegere. Nu pot fi dezactivate, pentru că alegerea în sine trebuie păstrată undeva.",
+    "analytics": "Analiză",
+    "analyticsDescription": "Măsurare agregată a paginilor citite. Dacă refuzați, scriptul nu este cerut deloc.",
+    "preferences": "Preferințe",
+    "preferencesDescription": "Rețin opțiuni de interfață, de exemplu limba în care ați citit ultima dată site-ul.",
+    "policyLink": "Citiți politica de cookie-uri",
+    "reopen": "Setări cookie-uri"
+  },
+  "notFound": {
+    "title": "Pagina aceasta nu există",
+    "body": "Este posibil ca adresa să fie greșită sau ca pagina să fi fost mutată la o restructurare a site-ului. Legăturile de mai jos acoperă tot ce există pe site.",
+    "home": "Mergeți la pagina principală",
+    "services": "Vedeți cele șase servicii",
+    "contact": "Contactați-ne"
+  },
+  "error": {
+    "title": "Pagina nu s-a încărcat",
+    "body": "A apărut o eroare de partea noastră. De obicei este suficientă o reîncărcare. Dacă nu, restul site-ului funcționează, iar pagina de contact este disponibilă.",
+    "retry": "Reîncărcați pagina"
   }
 }

@@ -28,5 +28,114 @@
     "cookieSettings": "Cookie settings",
     "copyright": "© {year} {company}. All rights reserved.",
     "disclosure": "Lintel Engineering is a fictional company. This site is a demonstration project."
+  },
+  "common": {
+    "breadcrumbLabel": "Breadcrumb",
+    "readMore": "Read more",
+    "backTo": "Back to {page}",
+    "updated": "Updated {date}",
+    "relatedWork": "Related work",
+    "allServices": "All services",
+    "peopleInDiscipline": "{count, plural, one {# person} other {# people}}"
+  },
+  "services": {
+    "indexTitle": "Six services, grouped under three disciplines",
+    "indexDescription": "What each discipline covers, and which of the six services sits under it.",
+    "whatWeDo": "What the work covers",
+    "faqHeading": "Frequently asked",
+    "cta": "Discuss a project"
+  },
+  "work": {
+    "indexTitle": "Four engagements, described with the constraint that shaped them",
+    "sector": "Sector",
+    "location": "Location",
+    "year": "Year",
+    "duration": "Duration",
+    "client": "Client",
+    "servicesUsed": "Services drawn on",
+    "cta": "Discuss a similar project"
+  },
+  "insights": {
+    "indexTitle": "Notes on problems we meet often enough to have formed a view about",
+    "publishedOn": "Published {date}",
+    "readingTime": "{minutes} min read",
+    "writtenBy": "Written by {author}",
+    "topics": "Topics",
+    "backToIndex": "All insights"
+  },
+  "about": {
+    "teamHeading": "Who leads the work",
+    "joined": "Joined {year}"
+  },
+  "careers": {
+    "positionsHeading": "Open positions",
+    "location": "Location",
+    "commitment": "Commitment",
+    "experience": "Experience",
+    "responsibilities": "What you would do",
+    "requirements": "What we are looking for",
+    "offer": "What we offer",
+    "apply": "Apply for this position",
+    "applyHint": "Applications go to the discipline lead, not to a recruitment inbox."
+  },
+  "contact": {
+    "title": "Tell us what has stalled",
+    "description": "Tell us what has stalled and when it has to be resolved. We reply within two working days, from the engineer who would lead the work.",
+    "formHeading": "Send us the outline",
+    "name": "Name",
+    "company": "Company",
+    "email": "Email",
+    "enquiryType": "What is this about",
+    "enquiryPlaceholder": "Select a discipline",
+    "message": "What has stalled, and by when does it need resolving",
+    "messageHint": "A few sentences is enough. We will ask for drawings if we need them.",
+    "emailHint": "We reply from a named engineer, not a shared inbox.",
+    "consent": "I have read the privacy policy and agree to be contacted in reply.",
+    "consentLink": "privacy policy",
+    "optional": "optional",
+    "submit": "Send enquiry",
+    "submitting": "Sending your enquiry",
+    "successHeading": "Your enquiry has reached us",
+    "successBody": "We will reply within two working days, from the engineer who would lead the work. If it is urgent before then, call {phone}.",
+    "failureHeading": "Your enquiry did not send",
+    "failureBody": "Something went wrong at our end, not yours. Try again in a moment, or email {email} directly and your message will reach the same place.",
+    "errors": {
+      "nameRequired": "Enter your name, so we know who we are replying to.",
+      "emailRequired": "Enter an email address so we can reply.",
+      "emailInvalid": "That address is missing an @ or a domain. Check it and try again.",
+      "enquiryRequired": "Choose the closest discipline, so your enquiry reaches the right engineer.",
+      "messageRequired": "Tell us roughly what the project is, so we can route this to the right discipline.",
+      "messageTooShort": "A sentence or two more would help us route this correctly.",
+      "consentRequired": "We need your agreement before we can store your message and reply to it.",
+      "tooFast": "That was submitted faster than a person can type. If you are not a bot, wait a moment and send it again."
+    }
+  },
+  "cookies": {
+    "heading": "Cookies on this site",
+    "body": "We store one cookie to remember this choice. Analytics and preference cookies are not loaded unless you accept them, and nothing here is used for advertising.",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "manage": "Choose categories",
+    "save": "Save choices",
+    "necessary": "Necessary",
+    "necessaryDescription": "Remembers this choice. Cannot be switched off, because the choice itself has to be stored.",
+    "analytics": "Analytics",
+    "analyticsDescription": "Aggregated page measurement. The script is never requested if you decline.",
+    "preferences": "Preferences",
+    "preferencesDescription": "Remembers interface choices, such as the language you last read the site in.",
+    "policyLink": "Read the cookie policy",
+    "reopen": "Cookie settings"
+  },
+  "notFound": {
+    "title": "That page does not exist",
+    "body": "The address may be mistyped, or the page may have been moved when the site was restructured. The links below cover everything on the site.",
+    "home": "Go to the home page",
+    "services": "See the six services",
+    "contact": "Contact us"
+  },
+  "error": {
+    "title": "This page did not load",
+    "body": "Something failed at our end. Reloading usually fixes it. If it does not, the rest of the site is unaffected and the contact page still works.",
+    "retry": "Reload the page"
   }
 }
