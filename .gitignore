@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+next-env.d.ts
+
+# test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.lighthouseci/
+
+# environment
+.env
+.env.local
+.env*.local
+
+# editors and OS
+.DS_Store
+.idea/
+*.swp
+
+# caches
+.eslintcache
+*.tsbuildinfo
+.vercel
