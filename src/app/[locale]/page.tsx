@@ -31,8 +31,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: L
           </h1>
           <p className="mt-6 max-w-measure text-lead leading-snug text-secondary">
             {company.name} has advised manufacturers, developers and public infrastructure bodies
-            since {company.founded}. {company.headcount} engineers across {company.disciplines}{' '}
-            disciplines, working from {company.address.city}.
+            since {company.founded}. {company.headcount} engineers across{' '}
+            {company.disciplines.length} disciplines, working from {company.address.city}.
           </p>
         </div>
       </div>
