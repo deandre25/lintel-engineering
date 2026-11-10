@@ -1,0 +1,210 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_PUBLIC_SITE_URL: https://lintel-engineering.com
+
+jobs:
+  # Static analysis stands alone so a type or lint error reports in seconds
+  # instead of behind a build and a browser download.
+  static:
+    name: Types, lint, format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Route and root-param types live in .next/types and are not committed.
+      - name: Generate route types
+        run: npm run typegen
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vitest
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  build:
+    name: Build and bundle budget
+    runs-on: ubuntu-latest
+    needs: [static]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Fails the job if a route exceeds the first-load JS budget, so the number
+      # recorded in the README cannot quietly regress.
+      - name: First-load JS budget
+        run: npm run report:bundle
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/
+            !.next/cache/
+          retention-days: 1
+
+  browser:
+    name: E2E, accessibility, visual
+    runs-on: ubuntu-latest
+    needs: [static]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Playwright builds and serves the production output itself, configured in
+      # playwright.config.ts, so every suite runs against what would deploy.
+      - name: Playwright
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  links:
+    name: Link check
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next/
+
+      - name: Start server
+        run: |
+          npx next start --port 3100 &
+          npx wait-on http://127.0.0.1:3100/en --timeout 120000
+
+      # The URL list is derived from the prerendered output, so every page the
+      # build produces is checked without anyone maintaining a list. Extraction
+      # of links found inside page bodies is enabled in Phase 4, once the pages
+      # those links point at exist.
+      - name: Collect URLs
+        run: node scripts/list-urls.mjs --base http://127.0.0.1:3100 > urls.txt
+
+      - name: Lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --include-verbatim
+            --max-concurrency 8
+            --accept 200..=299
+            urls.txt
+          fail: true
+
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next/
+
+      # Thresholds live in lighthouserc.json and match the budget in the brief;
+      # the job fails below any of them.
+      - name: Lighthouse CI
+        run: npx lhci autorun
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
