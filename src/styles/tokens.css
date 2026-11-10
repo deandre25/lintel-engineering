@@ -1,0 +1,172 @@
+/*
+ * Design tokens. Single source of truth for the visual system.
+ *
+ * Every value a component can consume is declared here and exposed to Tailwind
+ * through `@theme inline` in globals.css, so a utility class and a raw `var()`
+ * always resolve to the same number. Nothing in this file is derived at build
+ * time, which keeps the cascade inspectable in devtools.
+ *
+ * Contrast ratios in the comments are measured against WCAG 2.1 relative
+ * luminance, not estimated. They are asserted in tests/unit/styles/tokens.test.ts.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- colour */
+
+  /*
+   * One near-black carrying a slate-blue hue (~215deg), a warm off-white, and a
+   * neutral ramp interpolated between them so every grey shares the same cast.
+   * No pure black or white anywhere.
+   */
+  --ink-900: #0e1319;
+  --ink-800: #151c26;
+  --ink-700: #1f2833;
+  --ink-600: #2e3845;
+  --ink-500: #4a5563;
+  --ink-400: #606a79;
+  --ink-300: #98a2b0;
+  --ink-200: #c3cad3;
+  --ink-100: #dde1e7;
+  --ink-050: #ebedf0;
+
+  --paper: #f8f6f2;
+  --paper-sunken: #f1eee8;
+  --paper-raised: #fdfcfa;
+
+  /*
+   * A single accent, a dark vermilion borrowed from oxide primer. It carries
+   * state and emphasis only; §6 of the brief caps it below 5% of any viewport.
+   * Three variants exist because one hex cannot pass AA on both papers and ink.
+   */
+  --accent: #9c3f17;
+  --accent-strong: #7e3211;
+  --accent-on-dark: #d1764a;
+
+  /* Semantic aliases. Components reference these, never the ramp directly. */
+  --surface: var(--paper);
+  --surface-sunken: var(--paper-sunken);
+  --surface-raised: var(--paper-raised);
+  --surface-inverse: var(--ink-900);
+
+  --text-primary: var(--ink-900); /* 17.28:1 on --paper */
+  --text-secondary: var(--ink-500); /*  7.02:1 on --paper */
+  --text-muted: var(--ink-400); /*  5.07:1 on --paper, 4.73:1 on --paper-sunken */
+  --text-inverse: var(--paper); /* 17.28:1 on --ink-900 */
+  --text-inverse-muted: var(--ink-300); /*  7.22:1 on --ink-900 */
+  --text-accent: var(--accent); /*  6.20:1 on --paper */
+  --text-accent-inverse: var(--accent-on-dark); /*  5.69:1 on --ink-900 */
+
+  /* Hairline rules carry structure in place of bordered, shadowed cards. */
+  --rule: var(--ink-100);
+  --rule-strong: var(--ink-200);
+  --rule-inverse: #2b3542;
+
+  --focus-ring: var(--accent);
+  --focus-ring-inverse: var(--accent-on-dark);
+
+  /* ------------------------------------------------------------ typography */
+
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /*
+   * Modular scale. Ratio 1.25 through the text sizes, widening to 1.333 across
+   * the display sizes, so headings separate at large sizes without the body
+   * ramp becoming coarse. Steps are fixed; fluidity lives in the role tokens.
+   */
+  --step-000: 0.75rem; /* 12px */
+  --step-00: 0.875rem; /* 14px */
+  --step-0: 1.0625rem; /* 17px — body */
+  --step-1: 1.3125rem; /* 21px */
+  --step-2: 1.6875rem; /* 27px */
+  --step-3: 2.0625rem; /* 33px */
+  --step-4: 2.75rem; /* 44px */
+  --step-5: 3.6875rem; /* 59px */
+  --step-6: 4.9375rem; /* 79px */
+
+  /*
+   * Role tokens. Display sizes interpolate with vw between two fixed steps, so
+   * they never produce a value outside the scale and never shift after paint.
+   */
+  --text-micro: var(--step-000);
+  --text-caption: var(--step-00);
+  --text-body: var(--step-0);
+  --text-body-lg: var(--step-1);
+  --text-lead: clamp(1.3125rem, 1.19rem + 0.55vw, 1.5rem);
+
+  --text-h6: var(--step-1);
+  --text-h5: clamp(1.4375rem, 1.35rem + 0.4vw, 1.6875rem);
+  --text-h4: clamp(1.6875rem, 1.55rem + 0.6vw, 2.0625rem);
+  --text-h3: clamp(2.0625rem, 1.83rem + 1vw, 2.75rem);
+  --text-h2: clamp(2.375rem, 1.95rem + 1.9vw, 3.6875rem);
+  --text-h1: clamp(2.75rem, 2.1rem + 2.9vw, 4.9375rem);
+
+  --leading-tight: 1.04;
+  --leading-display: 1.1;
+  --leading-snug: 1.25;
+  --leading-body: 1.6;
+  --leading-relaxed: 1.7;
+
+  /* Editorial serif needs negative tracking at display sizes to hold together. */
+  --tracking-display: -0.022em;
+  --tracking-tight: -0.012em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-eyebrow: 0.09em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Body measure capped per §6. Applied by the Prose and Measure primitives. */
+  --measure: 68ch;
+  --measure-narrow: 54ch;
+  --measure-wide: 76ch;
+
+  /* --------------------------------------------------------------- spacing */
+
+  /* 8px scale, with 4px as the only half-step, for inline rhythm. */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.5rem; /* 24px */
+  --space-6: 2rem; /* 32px */
+  --space-7: 3rem; /* 48px */
+  --space-8: 4rem; /* 64px */
+  --space-9: 6rem; /* 96px */
+  --space-10: 8rem; /* 128px */
+  --space-11: 10rem; /* 160px */
+  --space-12: 12rem; /* 192px */
+
+  /* Vertical rhythm between sections, deliberately larger than instinct. */
+  --section-y: clamp(var(--space-9), 4rem + 6vw, var(--space-11));
+  --section-y-tight: clamp(var(--space-8), 3rem + 4vw, var(--space-9));
+
+  /* ---------------------------------------------------------------- layout */
+
+  /* Fixed so the sticky header's height can offset the mobile panel and the
+   * in-page scroll padding without measuring anything at runtime. */
+  --header-height: 4.5rem; /* 72px */
+
+  --width-content: 80rem; /* 1280px */
+  --width-bleed: 90rem; /* 1440px */
+  --width-text: 48rem; /* 768px, for article columns */
+  --gutter: clamp(var(--space-5), 1rem + 3vw, var(--space-8));
+  --grid-columns: 12;
+  --grid-gap: clamp(var(--space-5), 1rem + 1.5vw, var(--space-6));
+
+  /* ---------------------------------------------------- borders and motion */
+
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 3px;
+}

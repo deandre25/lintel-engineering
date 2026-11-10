@@ -1,0 +1,250 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/*
+ * `@theme inline` emits utilities that reference the custom properties rather
+ * than copying their values, so `text-ink-900` and `var(--ink-900)` stay in
+ * sync and a token can be overridden in a scope without rebuilding Tailwind.
+ */
+@theme inline {
+  /* Clear Tailwind's defaults: the brief rules out an unmodified default ramp. */
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --spacing-*: initial;
+  --radius-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+  --breakpoint-*: initial;
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+  --color-ink-100: var(--ink-100);
+  --color-ink-050: var(--ink-050);
+
+  --color-paper: var(--paper);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-paper-raised: var(--paper-raised);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-on-dark: var(--accent-on-dark);
+
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inverse: var(--surface-inverse);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-inverse: var(--text-inverse);
+  --color-inverse-muted: var(--text-inverse-muted);
+
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-rule-inverse: var(--rule-inverse);
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --text-micro: var(--text-micro);
+  --text-caption: var(--text-caption);
+  --text-body: var(--text-body);
+  --text-body-lg: var(--text-body-lg);
+  --text-lead: var(--text-lead);
+  --text-h6: var(--text-h6);
+  --text-h5: var(--text-h5);
+  --text-h4: var(--text-h4);
+  --text-h3: var(--text-h3);
+  --text-h2: var(--text-h2);
+  --text-h1: var(--text-h1);
+
+  --leading-tight: var(--leading-tight);
+  --leading-display: var(--leading-display);
+  --leading-snug: var(--leading-snug);
+  --leading-body: var(--leading-body);
+  --leading-relaxed: var(--leading-relaxed);
+
+  --tracking-display: var(--tracking-display);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-eyebrow: var(--tracking-eyebrow);
+
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-7: var(--space-7);
+  --spacing-8: var(--space-8);
+  --spacing-9: var(--space-9);
+  --spacing-10: var(--space-10);
+  --spacing-11: var(--space-11);
+  --spacing-12: var(--space-12);
+  --spacing-section: var(--section-y);
+  --spacing-section-tight: var(--section-y-tight);
+  --spacing-gutter: var(--gutter);
+  --spacing-px: 1px;
+  --spacing-0: 0px;
+
+  --radius-none: var(--radius-none);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+
+  --container-content: var(--width-content);
+  --container-bleed: var(--width-bleed);
+  --container-text: var(--width-text);
+  --container-measure: var(--measure);
+  --container-measure-narrow: var(--measure-narrow);
+  --container-measure-wide: var(--measure-wide);
+
+  --spacing-header: var(--header-height);
+
+  --breakpoint-sm: 30rem; /* 480px */
+  --breakpoint-md: 48rem; /* 768px */
+  --breakpoint-lg: 64rem; /* 1024px */
+  --breakpoint-xl: 80rem; /* 1280px */
+
+  --default-transition-duration: var(--duration-base);
+  --default-transition-timing-function: var(--ease-out);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    /*
+     * `scroll-padding-top` keeps the sticky header from covering an in-page
+     * anchor target, including the skip link's destination.
+     */
+    scroll-padding-top: calc(var(--header-height) + var(--space-4));
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-normal);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-weight: var(--weight-regular);
+    text-wrap: balance;
+  }
+
+  p,
+  ul,
+  ol,
+  dl,
+  figure,
+  blockquote {
+    margin: 0;
+  }
+
+  /*
+   * Numbers appear in sequence all over this site — case-study results, team
+   * credentials, table figures — so tabular figures are the default and
+   * proportional figures are the opt-in, not the other way round.
+   */
+  body {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Headings and running prose read better with the default proportional set. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-variant-numeric: normal;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  hr {
+    height: 1px;
+    margin: 0;
+    border: 0;
+    background-color: var(--rule);
+  }
+
+  /*
+   * One focus treatment for the whole site, designed rather than inherited.
+   * `:focus-visible` only, so pointer users never see it; the ring sits off the
+   * element so it survives on dark and light surfaces alike.
+   */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+    border-radius: var(--radius-xs);
+  }
+
+  [data-surface='inverse'] :focus-visible {
+    outline-color: var(--focus-ring-inverse);
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--paper-raised);
+  }
+
+  /* §6: all motion is opt-out, and the opt-out is total, not partial. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
