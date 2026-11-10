@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Lintel Engineering</title>
+  <rect width="32" height="32" fill="#0e1319" />
+  <g fill="#f8f6f2">
+    <rect x="4" y="7" width="24" height="4" />
+    <rect x="7" y="11" width="4" height="14" />
+    <rect x="21" y="11" width="4" height="14" />
+  </g>
+</svg>
