@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { locales } from '@/lib/routing';
 
+import { disciplineSchema } from './schema';
+
 import type { Locale } from '@/lib/routing';
 
 /**
@@ -26,55 +28,70 @@ function localisedString(schema: z.ZodString = z.string().min(1)) {
  */
 const metaDescription = z.string().min(140).max(160);
 
-const companySchema = z.object({
-  /** Trading name, as it appears in the wordmark and page titles. */
-  name: z.string().min(1),
-  /** Registered name, for the legal notice and `Organization` JSON-LD. */
-  legalName: z.string().min(1),
-  founded: z.number().int().min(1900).max(2100),
-  headcount: z.number().int().positive(),
+const companySchema = z
+  .object({
+    /** Trading name, as it appears in the wordmark and page titles. */
+    name: z.string().min(1),
+    /** Registered name, for the legal notice and `Organization` JSON-LD. */
+    legalName: z.string().min(1),
+    founded: z.number().int().min(1900).max(2100),
+    headcount: z.number().int().positive(),
 
-  /** One sentence of positioning. Used in the home page title and OG tags. */
-  positioning: localisedString(),
+    /** One sentence of positioning. Used in the home page title and OG tags. */
+    positioning: localisedString(),
 
-  /**
-   * The company in one sentence, for the home page's meta description and the
-   * `description` of the `Organization` JSON-LD. Per-page descriptions are
-   * written per page in Phase 5; this one belongs to the company.
-   */
-  shortDescription: localisedString(metaDescription),
+    /**
+     * The company in one sentence, for the home page's meta description and the
+     * `description` of the `Organization` JSON-LD. Per-page descriptions are
+     * written per page in Phase 5; this one belongs to the company.
+     */
+    shortDescription: localisedString(metaDescription),
 
-  address: z.object({
-    street: z.string().min(1),
-    postalCode: z.string().min(1),
-    city: z.string().min(1),
-    region: z.string().min(1),
-    country: z.string().min(1),
-    countryCode: z.string().length(2),
-    /** Decimal degrees, for the `PostalAddress` geo in JSON-LD. */
-    latitude: z.number(),
-    longitude: z.number(),
-  }),
+    address: z.object({
+      street: z.string().min(1),
+      postalCode: z.string().min(1),
+      city: z.string().min(1),
+      region: z.string().min(1),
+      country: z.string().min(1),
+      countryCode: z.string().length(2),
+      /** Decimal degrees, for the `PostalAddress` geo in JSON-LD. */
+      latitude: z.number(),
+      longitude: z.number(),
+    }),
 
-  contact: z.object({
-    email: z.email(),
-    /** E.164, so it is valid in both `tel:` hrefs and structured data. */
-    phone: z.string().regex(/^\+[1-9]\d{6,14}$/),
-    phoneDisplay: z.string().min(1),
-  }),
+    contact: z.object({
+      email: z.email(),
+      /** E.164, so it is valid in both `tel:` hrefs and structured data. */
+      phone: z.string().regex(/^\+[1-9]\d{6,14}$/),
+      phoneDisplay: z.string().min(1),
+    }),
 
-  registration: z.object({
-    /** Romanian trade register number. */
-    tradeRegister: z.string().min(1),
-    /** VAT identification number. */
-    vatId: z.string().min(1),
-  }),
+    registration: z.object({
+      /** Romanian trade register number. */
+      tradeRegister: z.string().min(1),
+      /** VAT identification number. */
+      vatId: z.string().min(1),
+    }),
 
-  /** ISO 3166-1 alpha-2 codes for the markets served, used by `areaServed`. */
-  areaServed: z.array(z.string().length(2)).nonempty(),
+    /** ISO 3166-1 alpha-2 codes for the markets served, used by `areaServed`. */
+    areaServed: z.array(z.string().length(2)).nonempty(),
 
-  disciplines: z.number().int().positive(),
-});
+    /*
+     * The disciplines the six services are grouped under. Names and descriptions
+     * are per-locale content; only the facts live here. The headcounts must add
+     * up to `headcount`, so the home page cannot print a breakdown that
+     * contradicts the total it prints beside it.
+     */
+    disciplines: z
+      .array(z.object({ id: disciplineSchema.shape.id, headcount: z.number().int().positive() }))
+      .length(3),
+  })
+  .refine(
+    (value) =>
+      value.disciplines.reduce((total, discipline) => total + discipline.headcount, 0) ===
+      value.headcount,
+    { error: 'Discipline headcounts must sum to the company headcount' },
+  );
 
 export type Company = z.infer<typeof companySchema>;
 
@@ -87,7 +104,12 @@ export const company: Company = companySchema.parse({
   legalName: 'Lintel Engineering SRL',
   founded: 2009,
   headcount: 48,
-  disciplines: 3,
+
+  disciplines: [
+    { id: 'structures', headcount: 21 },
+    { id: 'industrial-systems', headcount: 17 },
+    { id: 'information-and-risk', headcount: 10 },
+  ],
 
   positioning: {
     en: 'Engineering judgement for projects that are technically contested',
