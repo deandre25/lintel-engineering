@@ -47,6 +47,11 @@ export interface RouteDefinition {
   readonly paths: Readonly<Record<Locale, PathTemplate>>;
   /** True when the template contains a `[slug]` segment. */
   readonly dynamic: boolean;
+  /**
+   * True for routes that must stay out of the sitemap and carry `noindex`.
+   * Only the styleguide, which is a development surface rather than a page.
+   */
+  readonly noindex?: boolean;
 }
 
 export const routes = {
@@ -120,11 +125,32 @@ export const routes = {
     paths: { en: '/legal-notice', ro: '/informatii-legale' },
     dynamic: false,
   },
+  /*
+   * Not translated: it is read by developers, not visitors, and keeping one
+   * spelling avoids generating rewrites for a page that is not public.
+   */
+  styleguide: {
+    internal: '/styleguide',
+    paths: { en: '/styleguide', ro: '/styleguide' },
+    dynamic: false,
+    noindex: true,
+  },
 } as const satisfies Record<string, RouteDefinition>;
 
 export type RouteId = keyof typeof routes;
 
 export const routeIds = Object.keys(routes) as readonly RouteId[];
+
+/**
+ * The registry widened to its declared interface.
+ *
+ * `routes` is `as const`, so TypeScript narrows each entry to literal types and
+ * an optional field absent from most entries is not readable across the union.
+ * This is a plain assignment, not a cast: the literal object is assignable to
+ * the interface, so the compiler still checks it. `routes` keeps its literal
+ * types for `routePath`, while code reading optional fields uses this.
+ */
+const routeDefinitions: Record<RouteId, RouteDefinition> = routes;
 
 /** Route ids whose template has no `[slug]`, so a path needs no parameters. */
 export type StaticRouteId = {
@@ -179,6 +205,11 @@ export function internalPath(locale: Locale, id: StaticRouteId): string;
 export function internalPath(locale: Locale, id: DynamicRouteId, slug: string): string;
 export function internalPath(locale: Locale, id: RouteId, slug?: string): string {
   return joinLocale(locale, fill(routes[id].internal, slug));
+}
+
+/** Routes that belong in the sitemap: everything a visitor should find. */
+export function indexableRouteIds(): RouteId[] {
+  return routeIds.filter((id) => routeDefinitions[id].noindex !== true);
 }
 
 /** True when a route's public path is translated away from its internal one. */
