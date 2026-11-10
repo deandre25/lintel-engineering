@@ -90,21 +90,27 @@ the browser to fetch. Scripts marked `noModule` are reported separately rather
 than counted: no browser that supports ES modules downloads them, so including
 them would overstate what a visitor receives by 38.6 KB.
 
-### 2026-11-10 — The 110 KB first-load budget is not reachable on this stack
+### 2026-11-10 — First-load JS budget restated from 110 KB to 140 KB
 
-Measured on the Phase 1 shell: 136.6 KB gzipped with Turbopack, 135.8 KB with
-webpack. A route with no client components at all measures the same, so this is
-the React 19 / Next 16 hydration baseline, not application code — of which there
-is about 5 KB. The §1 target of 110 KB would require a different framework.
+The brief's original figure was 110 KB gzipped. Measured on the Phase 1 shell:
 
-The outcomes the budget exists to protect are met: Lighthouse Performance 100,
-LCP 0.76 s, CLS 0.000, TBT 12-75 ms on a throttled mobile profile.
+| Build     | Modern browsers | `noModule` legacy bundle |
+| --------- | --------------- | ------------------------ |
+| Turbopack | 136.6 KB        | 38.6 KB                  |
+| webpack   | 135.8 KB        | 38.6 KB                  |
 
-Interim: the CI gate is set to 140 KB — the measured baseline plus about 3 KB of
-headroom — so a real regression still fails the build rather than the gate being
-switched off. This is a deviation from §1 and needs a decision: restate the
-budget at 140 KB, or change the framework. It is not a target that was quietly
-relaxed to make the build pass.
+The decisive measurement is that `/_not-found`, a route with no client
+components whatsoever, measures the same. The weight is therefore the React 19 /
+Next 16 hydration baseline, not application code — of which there is roughly
+5 KB. Reaching 110 KB would mean changing framework, not optimising this one.
+
+The outcomes the budget existed to protect are all met on a throttled mobile
+profile: Lighthouse Performance 100, LCP 0.76 s, CLS 0.000, TBT 12-75 ms.
+
+Decision: budget restated to 140 KB — the measured baseline plus about 3 KB of
+headroom — and the framework stays. The CI gate enforces 140 KB, so a real
+regression still fails the build; the gate was not switched off. Approved at
+GATE 1.
 
 ### 2026-11-10 — Contrast is asserted against the stylesheet, not a copy
 
@@ -113,6 +119,35 @@ ratio for every text and interface pairing the components use. A duplicated
 table of colour values in TypeScript would drift from the CSS, and a drifted
 copy reports passes that are not real. The first run of this suite caught a real
 failure: the footer disclosure used `--ink-400` on `--ink-900` at 3.4:1.
+
+### 2026-11-10 — Best Practices 96 was a missing icon, not a missing CSP
+
+Four points were lost to a single weighted audit, `errors-in-console`: with no
+`<link rel="icon">` the browser falls back to `/favicon.ico`, receives a 404 and
+logs a console error. Lighthouse scores `csp-xss` at weight 0, so the
+Content-Security-Policy work in Phase 6 could never have moved this number.
+
+Fixed by `src/app/icon.svg`, the brand lintel drawn for legibility at 16 px.
+Two colours only, because a third is mud at that size.
+
+### 2026-11-10 — The unit suite asserts behaviours, not examples
+
+The suite reached 55 tests at the end of Phase 1, which is more than §13 budgets
+for the whole project. The cause was parameterisation: 19 of them were one `it`
+per colour pairing, generated in a loop, which inflates the count without adding
+coverage. None of them asserted that a component rendered without asserting
+something about what it rendered — there are no component tests yet at all.
+
+Consolidated to 18 tests with identical coverage, grouped by behaviour rather
+than by example. The contrast checks now iterate internally and collect every
+failing pairing before asserting, so one run reports the whole problem instead
+of stopping at the first pair.
+
+Verified by mutation rather than by inspection: changing `--ink-400` from
+`#606a79` to `#8a94a3` fails the suite with
+`ink-400 on paper (muted text and metadata) is 2.8:1` and the sunken-panel pair
+alongside it. A consolidated test that could not fail would be worse than the 19
+it replaced.
 
 ### 2026-11-10 — The locale layout is the root layout
 
