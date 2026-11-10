@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "label": "Principal",
+    "home": "Acasă",
+    "services": "Servicii",
+    "work": "Proiecte",
+    "about": "Despre noi",
+    "insights": "Analize",
+    "contact": "Contact",
+    "careers": "Cariere",
+    "openMenu": "Deschide meniul",
+    "closeMenu": "Închide meniul",
+    "skipToContent": "Sari la conținut"
+  },
+  "localeSwitcher": {
+    "label": "Limbă",
+    "switchTo": "Comută pe {language}"
+  },
+  "footer": {
+    "navigationLabel": "Subsol",
+    "contactHeading": "Contact",
+    "officeHeading": "Birou",
+    "legalHeading": "Informații legale",
+    "privacy": "Politica de confidențialitate",
+    "cookies": "Politica de cookie-uri",
+    "terms": "Termeni de utilizare",
+    "legalNotice": "Date de identificare",
+    "cookieSettings": "Setări cookie-uri",
+    "copyright": "© {year} {company}. Toate drepturile rezervate.",
+    "disclosure": "Lintel Engineering este o companie fictivă. Acest site este un proiect demonstrativ."
+  }
+}

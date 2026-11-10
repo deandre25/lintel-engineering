@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "label": "Primary",
+    "home": "Home",
+    "services": "Services",
+    "work": "Work",
+    "about": "About",
+    "insights": "Insights",
+    "contact": "Contact",
+    "careers": "Careers",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to content"
+  },
+  "localeSwitcher": {
+    "label": "Language",
+    "switchTo": "Switch to {language}"
+  },
+  "footer": {
+    "navigationLabel": "Footer",
+    "contactHeading": "Contact",
+    "officeHeading": "Office",
+    "legalHeading": "Legal",
+    "privacy": "Privacy policy",
+    "cookies": "Cookie policy",
+    "terms": "Terms of use",
+    "legalNotice": "Legal notice",
+    "cookieSettings": "Cookie settings",
+    "copyright": "© {year} {company}. All rights reserved.",
+    "disclosure": "Lintel Engineering is a fictional company. This site is a demonstration project."
+  }
+}
