@@ -77,36 +77,41 @@ for (const locale of locales) {
 }
 
 test.describe('the 404', () => {
-  test('answers 404 and offers a route onward in both languages', async ({ page }) => {
-    const response = await page.goto('/en/this-page-does-not-exist');
+  test('a mistyped path under a locale gets the localised document', async ({ page }) => {
+    const response = await page.goto('/ro/aceasta-pagina-nu-exista');
     expect(response?.status()).toBe(404);
 
-    /* Bilingual, because a path that matched no route has no locale to read. */
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(2);
-    await expect(page.getByText('That page does not exist')).toBeVisible();
-    await expect(page.getByText('Pagina aceasta nu există')).toBeVisible();
+    /* It renders through the locale layout, so it inherits lang and chrome. */
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ro-RO');
+    await expect(page.getByRole('banner')).toBeVisible();
 
-    await expect(page.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute(
-      'href',
-      '/en',
-    );
-    await expect(page.getByRole('link', { name: 'Mergeți la pagina principală' })).toHaveAttribute(
-      'href',
-      '/ro',
-    );
+    /* Bilingual, because a 404 is rendered without route params. */
+    await expect(page.getByText('Pagina aceasta nu există')).toBeVisible();
+    await expect(page.getByText('That page does not exist')).toBeVisible();
   });
 
-  test('has no axe violations other than the document language Next owns', async ({ page }) => {
+  test('a path under a locale has no axe violations', async ({ page }) => {
     await page.goto('/en/this-page-does-not-exist');
 
     const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('a path with no locale prefix is correct apart from the shell Next owns', async ({
+    page,
+  }) => {
+    const response = await page.goto('/no-locale-prefix-here');
+    expect(response?.status()).toBe(404);
 
     /*
-     * `html-has-lang` is excluded here and only here. The root layout lives at
-     * `[locale]/layout.tsx`, so Next renders the 404 in a shell it owns and
-     * emits the `<html>` itself, without `lang`. Everything inside the shell is
-     * ours and is asserted. See DECISIONS.md for the options for closing it.
+     * This is the only page without a root layout to wrap it, so Next emits the
+     * `<html>` itself and without `lang`. Every block inside carries its own
+     * `lang`, asserted below, so no text inherits language from the document.
      */
+    await expect(page.locator('section[lang="en-GB"]')).toBeVisible();
+    await expect(page.locator('section[lang="ro-RO"]')).toBeVisible();
+
+    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
     const ours = results.violations.filter((violation) => violation.id !== 'html-has-lang');
     expect(ours).toEqual([]);
   });

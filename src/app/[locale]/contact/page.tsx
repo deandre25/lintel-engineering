@@ -102,7 +102,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
             <br />
             {company.address.postalCode} {company.address.city}
             <br />
-            {company.address.country}
+            {company.address.country[locale]}
           </address>
         </div>
 

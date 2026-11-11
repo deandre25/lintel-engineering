@@ -11,7 +11,7 @@ import type { LegalPage } from '../schema';
  * It is not softened in either language.
  */
 
-const addressLine = `${company.address.street}, ${company.address.postalCode} ${company.address.city}, ${company.address.country}`;
+const addressLine = `${company.address.street}, ${company.address.postalCode} ${company.address.city}, ${company.address.country.ro}`;
 
 export const privacy: LegalPage = legalPageSchema.parse({
   title: 'Cum sunt tratate datele personale pe acest site',

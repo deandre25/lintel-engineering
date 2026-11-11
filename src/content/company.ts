@@ -52,7 +52,8 @@ const companySchema = z
       postalCode: z.string().min(1),
       city: z.string().min(1),
       region: z.string().min(1),
-      country: z.string().min(1),
+      /* The country's name is a word, so it differs by language. */
+      country: localisedString(),
       countryCode: z.string().length(2),
       /** Decimal degrees, for the `PostalAddress` geo in JSON-LD. */
       latitude: z.number(),
@@ -126,7 +127,7 @@ export const company: Company = companySchema.parse({
     postalCode: '500152',
     city: 'Brașov',
     region: 'Brașov',
-    country: 'Romania',
+    country: { en: 'Romania', ro: 'România' },
     countryCode: 'RO',
     latitude: 45.6525,
     longitude: 25.6104,
