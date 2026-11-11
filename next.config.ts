@@ -1,3 +1,4 @@
+import createMDX from '@next/mdx';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 import { canonicalLocaleRedirects, localisedRewrites } from './src/lib/rewrites';
@@ -7,8 +8,27 @@ import type { NextConfig } from 'next';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+/*
+ * MDX is used for the insight articles only. No remark or rehype plugins:
+ * the articles use headings, lists, tables and emphasis, all of which MDX
+ * handles natively, and every plugin added here is parsed on every build.
+ */
+const withMDX = createMDX({});
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  /* `md` is absent deliberately: articles are MDX so they can use components. */
+  pageExtensions: ['ts', 'tsx', 'mdx'],
+
+  experimental: {
+    /*
+     * The Rust MDX compiler. The JavaScript loader path in @next/mdx cannot
+     * resolve @mdx-js/loader under Turbopack, and the Rust compiler is both
+     * the supported route there and faster on a cold build.
+     */
+    mdxRs: true,
+  },
 
   /*
    * Trailing slashes are off and enforced by a redirect below, so every URL has
@@ -44,4 +64,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withNextIntl(withMDX(nextConfig));
