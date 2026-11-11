@@ -22,9 +22,9 @@ export const services: readonly Service[] = z
       name: 'Inginerie structurală',
       title: 'Inginerie structurală',
       summary:
-        'Verificarea proiectelor, certificare, evaluarea capacității construcțiilor existente și analiză seismică și la vânt.',
+        'Analiza independentă a proiectelor, evaluarea construcțiilor existente, a capacității portante și analiză seismică și la vânt.',
       description:
-        'Verificare independentă de proiect, certificarea construcțiilor existente, evaluarea capacității portante și analiză seismică, conform Eurocod.',
+        'Analiză independentă de proiect, evaluarea construcțiilor existente și a capacității portante, analiză seismică, conform Eurocod și anexei naționale.',
       intro:
         'Evaluăm, verificăm și certificăm structuri proiectate sau construite de altcineva, de obicei pentru că o decizie depinde acum de faptul că sunt sau nu corespunzătoare. Decizia nu este adesea una structurală: este achiziția unui pod rulant, un contract de închiriere, o autorizație sau o vânzare.',
       whenToCall: {
@@ -41,12 +41,12 @@ export const services: readonly Service[] = z
         heading: 'Ce cuprinde activitatea',
         items: [
           {
-            term: 'Verificarea proiectelor',
+            term: 'Analiza independentă a proiectelor',
             description:
               'Verificare independentă a proiectului altui inginer față de normativul aplicabil, inclusiv anexa națională valabilă acolo unde se află construcția. Raportăm ce am verificat, ce nu am verificat și pe ce bază.',
           },
           {
-            term: 'Certificarea construcțiilor existente',
+            term: 'Evaluarea construcțiilor existente',
             description:
               'Evaluare conform Eurocod în vigoare a unor structuri proiectate după normative care nu mai sunt aplicabile, adică majoritatea fondului industrial construit în regiune înainte de 1990.',
           },
@@ -76,7 +76,8 @@ export const services: readonly Service[] = z
         body: [
           'Eurocod 0, 1, 2, 3 și 8, aplicate cu anexa națională a țării în care se află construcția: România, Ungaria sau Germania.',
           'Când evaluarea este pentru un cumpărător sau un finanțator, nu pentru o autoritate, precizăm față de ce normativ am evaluat, pentru că răspunsul diferă în funcție de întrebare.',
-          'Lucrăm după normative publicate. Nu certificăm conformitatea în numele vreunui organism de acreditare și spunem de la început când o documentație are nevoie de un verificator care nu suntem noi.',
+          'Lucrăm după normative publicate și nu certificăm conformitatea în numele vreunui organism de acreditare.',
+          'În România, verificarea tehnică de calitate a proiectelor se face de un verificator de proiecte atestat, iar expertiza tehnică a construcțiilor de un expert tehnic atestat. Lintel nu deține niciuna dintre aceste atestări. Livrăm analiza și evaluarea pe care se sprijină aceste documente și spunem de la început când dosarul are nevoie de o semnătură pe care nu o putem da noi.',
         ],
       },
       engagements: {
@@ -202,8 +203,8 @@ export const services: readonly Service[] = z
       id: 'energy-and-efficiency-audits',
       slug: 'audit-energetic',
       discipline: 'industrial-systems',
-      name: 'Audit energetic și eficiență',
-      title: 'Audit energetic și eficiență',
+      name: 'Eficiență energetică și conformitate',
+      title: 'Eficiență energetică și conformitate',
       summary:
         'Conformare la Directiva de eficiență energetică, modelare termică și planuri de decarbonare cu măsuri cuantificate.',
       description:
@@ -259,6 +260,7 @@ export const services: readonly Service[] = z
           'Auditurile se fac conform EN 16247 și transpunerii naționale a Directivei de eficiență energetică din țara în care se află situl.',
           'Măsurarea și verificarea urmează structura protocolului internațional de măsurare și verificare a performanței, cu opțiunea și perioada de referință precizate în raport.',
           'Descriem aceste standarde ca bază a lucrării noastre. Nu suntem organism de verificare și nu emitem certificate în numele unuia.',
+          'Auditul energetic obligatoriu se întocmește în România de un auditor energetic autorizat, iar certificatul de performanță energetică de un auditor energetic pentru clădiri atestat. Lintel nu deține aceste autorizări. Facem măsurarea, modelarea și planul de măsuri pe care se bazează documentele, nu documentele în sine.',
         ],
       },
       engagements: {
@@ -430,6 +432,7 @@ export const services: readonly Service[] = z
           'Eurocod cu anexa națională a țării în care se află proiectul, alături de normativul național de construcții și de legislația de mediu aplicabilă.',
           'Unde cerințele naționale depășesc Eurocodul, proiectăm la cerința națională și precizăm în documentație de unde provine diferența.',
           'Pregătim și susținem dosarele. Decizia aparține autorității, iar noi nu ne prezentăm ca fiind în măsură să garantăm un rezultat.',
+          'Semnăturile rezervate prin lege — verificator de proiecte atestat, expert tehnic atestat — aparțin unor specialiști atestați care nu fac parte din firmă. Spunem de la început ce semnături cere dosarul și cine trebuie să le dea.',
         ],
       },
       engagements: {

@@ -21,7 +21,7 @@ export const disciplines: readonly Discipline[] = z
       id: 'structures',
       name: 'Structuri',
       description:
-        'Verificarea proiectelor, certificarea construcțiilor existente și întrebările de normativ care decid dacă o structură poate fi folosită așa cum își propune cineva.',
+        'Analiza independentă a proiectelor, evaluarea construcțiilor existente și întrebările de normativ care decid dacă o structură poate fi folosită așa cum își propune cineva.',
       headcount: headcountOf('structures'),
     },
     {

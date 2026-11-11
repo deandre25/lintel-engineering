@@ -12,7 +12,7 @@ import type { Home } from '../schema';
 export const home: Home = homeSchema.parse({
   title: 'Răspunsuri tehnice pentru proiecte blocate',
   description:
-    'Consultanță inginerească independentă în Brașov: certificare structurală, retehnologizări industriale și evaluarea riscului tehnic pentru industrie.',
+    'Consultanță inginerească independentă în Brașov: evaluarea construcțiilor existente, retehnologizări industriale și analiza riscului tehnic în industrie.',
 
   hero: {
     eyebrow: 'Brașov, România',
