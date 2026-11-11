@@ -382,3 +382,68 @@ The closing section sits on `--ink-900`, where the primary button's dark fill is
 invisible. A fourth variant inverts it — a paper fill with an `--ink-900` label
 at 17.2:1 — and its disabled state uses `--ink-600` with `--ink-200` at 7.1:1.
 Both pairings are in the asserted contrast list.
+
+### 2026-11-10 — The Romanian names reserved roles the English does not
+
+The English service pages decline to claim accreditation in general terms. The
+Romanian pages name three specific roles — `verificator de proiecte atestat`,
+`expert tehnic atestat` and `auditor energetic autorizat` — and state that
+Lintel holds none of them.
+
+**This asymmetry is correct and must not be "fixed" into a literal match.**
+Those roles are reserved in Romanian law, and a reader in the sector reads a
+service name as a claim to the attestation. The English has no such reading,
+because the roles do not exist in English. Localisation means saying what a
+reader of that language will understand, which here means saying more.
+
+Three Romanian service labels were renamed for the same reason, because a name
+in navigation, a card or a page title carries no disclaimer beside it:
+
+| Was                                   | Now                                  |
+| ------------------------------------- | ------------------------------------ |
+| Audit energetic                       | Eficiență energetică și conformitate |
+| Verificarea proiectelor               | Analiza independentă a proiectelor   |
+| Certificarea construcțiilor existente | Evaluarea construcțiilor existente   |
+
+In each pair the regulated word was the second one. The Romanian home page's
+meta description lost "certificare structurală" for the same reason: a meta
+description appears in search results with nothing beside it.
+
+### 2026-11-10 — Working practice: an edit that does not match must fail loudly
+
+Three edits in Phase 4 and one in Phase 2 silently did nothing. The cause is
+the same each time: `prettier-plugin-tailwindcss` reorders class lists after a
+file is written, so an edit matching remembered text no longer matches the file.
+A string replacement that finds nothing is not an error by default — it writes
+the file back unchanged and reports success.
+
+The practice, from here on: read the file as it currently stands before editing
+it; make every replacement assert that its target was found and abort if it was
+not; and verify the result by grepping for the new text rather than trusting the
+exit code. The Phase 2 instance shipped a visual regression through a green test
+run, which is what makes this worth writing down rather than remembering.
+
+### 2026-11-11 — The 404 document's `lang` is Next's, and is an open item
+
+The root layout lives at `[locale]/layout.tsx`, which is what makes `locale` a
+typed root param and keeps every page statically rendered. The cost appears at
+the 404: a URL that matched no route has no locale segment, so Next renders
+`app/not-found.tsx` in a shell it owns and emits the `<html>` itself, without
+`lang`. Rendering an `<html>` inside the component produces one nested in
+another, and `experimental.globalNotFound` did not change the behaviour here.
+
+What is ours is correct: the page is bilingual, each block carries its own
+`lang`, the title is hoisted from an element because `not-found.tsx` cannot
+export metadata, and axe reports nothing else. The suite excludes exactly one
+rule, `html-has-lang`, on exactly this page, with the reason in the test.
+
+Two ways to close it, neither taken yet:
+
+1. Reintroduce `app/layout.tsx` as the root layout holding `<html>`. This
+   demotes `locale` from a root param, so `getRequestConfig` returns to the
+   deprecated `requestLocale`, which the lint config currently rejects.
+2. Wait for `globalNotFound` to support a project whose root layout is a
+   dynamic segment.
+
+Option 1 trades a working, modern i18n setup for one attribute on one page, so
+it is recorded rather than applied.
