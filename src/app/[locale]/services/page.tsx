@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { CallToAction } from '@/components/sections/CallToAction';
 import { DisciplineList } from '@/components/sections/DisciplineList';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Container } from '@/components/ui/Container';
@@ -9,6 +10,8 @@ import { Link } from '@/components/ui/Link';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { breadcrumbFor } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { DisciplineGroup } from '@/components/sections/DisciplineList';
 import type { Metadata } from 'next';
@@ -25,7 +28,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: 'services' });
 
-  return { title: t('indexTitle'), description: getContent(locale).home.description };
+  return pageMetadata({
+    locale,
+    route: 'services',
+    title: t('indexTitle'),
+    description: getContent(locale).home.description,
+  });
 }
 
 /** The services index: the same grouping the home page shows, in full. */
@@ -53,6 +61,10 @@ export default async function ServicesIndexPage({
   return (
     <>
       <Container width="bleed" as="section" className="pt-8 pb-section-tight">
+        <JsonLd
+          data={breadcrumbFor(locale, [{ name: tNav('home'), route: 'home' }], tNav('services'))}
+        />
+
         <Breadcrumb
           locale={locale}
           label={t('breadcrumbLabel')}

@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { CallToAction } from '@/components/sections/CallToAction';
 import { CaseStudyGrid } from '@/components/sections/CaseStudyGrid';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Container } from '@/components/ui/Container';
@@ -9,6 +10,8 @@ import { Link } from '@/components/ui/Link';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { breadcrumbFor } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -24,7 +27,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: 'work' });
 
-  return { title: t('indexTitle'), description: getContent(locale).home.description };
+  return pageMetadata({
+    locale,
+    route: 'work',
+    title: t('indexTitle'),
+    description: getContent(locale).home.description,
+  });
 }
 
 /** All four case studies, newest first, led by the number each was measured by. */
@@ -38,6 +46,10 @@ export default async function WorkIndexPage({ params }: { params: Promise<{ loca
   return (
     <>
       <Container width="bleed" as="section" className="pt-8 pb-section-tight">
+        <JsonLd
+          data={breadcrumbFor(locale, [{ name: tNav('home'), route: 'home' }], tNav('work'))}
+        />
+
         <Breadcrumb
           locale={locale}
           label={t('breadcrumbLabel')}

@@ -60,6 +60,26 @@ const nextConfig: NextConfig = {
 
       /* Collapse the untranslated duplicates of every localised path. */
       ...canonicalLocaleRedirects().map((rule) => ({ ...rule })),
+
+      /*
+       * A plausible previous structure, kept because migrations are the normal
+       * case: a site that has existed has old URLs, and losing them loses the
+       * links pointing at them. Permanent, because these addresses are gone.
+       */
+      { source: '/services.html', destination: '/en/services', statusCode: 301 },
+      { source: '/contact.html', destination: '/en/contact', statusCode: 301 },
+      { source: '/about.html', destination: '/en/about', statusCode: 301 },
+      { source: '/despre-noi', destination: '/ro/despre-noi', statusCode: 301 },
+      { source: '/servicii', destination: '/ro/servicii', statusCode: 301 },
+      { source: '/case-studies', destination: '/en/work', statusCode: 301 },
+      { source: '/case-studies/:slug', destination: '/en/work/:slug', statusCode: 301 },
+
+      /*
+       * One spelling per URL. `trailingSlash: false` makes Next strip a
+       * trailing slash already; this states the rule for the paths that a
+       * previous structure served with one.
+       */
+      { source: '/:path*/', destination: '/:path*', statusCode: 301 },
     ]);
   },
 };

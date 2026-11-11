@@ -1,12 +1,15 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 
 import { SectionRule } from '@/components/graphics/SectionRule';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { breadcrumbFor } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -22,7 +25,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: 'insights' });
 
-  return { title: t('indexTitle'), description: getContent(locale).home.description };
+  return pageMetadata({
+    locale,
+    route: 'insights',
+    title: t('indexTitle'),
+    description: getContent(locale).home.description,
+  });
 }
 
 /** The insights index, newest first. */
@@ -40,6 +48,10 @@ export default async function InsightsIndexPage({
 
   return (
     <Container width="bleed" as="section" className="pt-8 pb-section">
+      <JsonLd
+        data={breadcrumbFor(locale, [{ name: tNav('home'), route: 'home' }], tNav('insights'))}
+      />
+
       <Breadcrumb
         locale={locale}
         label={t('breadcrumbLabel')}

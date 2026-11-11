@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 
 import { SectionRule } from '@/components/graphics/SectionRule';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
@@ -8,6 +9,8 @@ import { company } from '@/content/company';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { breadcrumbFor } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -23,7 +26,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const { careers } = getContent(locale);
 
-  return { title: careers.title, description: careers.description };
+  return pageMetadata({
+    locale,
+    route: 'careers',
+    title: careers.title,
+    description: careers.description,
+  });
 }
 
 /**
@@ -44,6 +52,10 @@ export default async function CareersPage({ params }: { params: Promise<{ locale
 
   return (
     <Container width="bleed" as="section" className="pt-8 pb-section">
+      <JsonLd
+        data={breadcrumbFor(locale, [{ name: tNav('home'), route: 'home' }], tNav('careers'))}
+      />
+
       <Breadcrumb
         locale={locale}
         label={t('breadcrumbLabel')}

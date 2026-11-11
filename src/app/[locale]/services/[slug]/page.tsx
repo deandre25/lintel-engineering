@@ -4,15 +4,18 @@ import { getTranslations } from 'next-intl/server';
 import { AxisDiagram } from '@/components/graphics/AxisDiagram';
 import { SectionRule } from '@/components/graphics/SectionRule';
 import { CallToAction } from '@/components/sections/CallToAction';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Container } from '@/components/ui/Container';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { Link } from '@/components/ui/Link';
 import { Prose } from '@/components/ui/Prose';
-import { getContent, getService, slugsFor } from '@/content/registry';
+import { getContent, getService, slugsFor, translateSlug } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
-import { isLocale, locales } from '@/lib/routing';
+import { isLocale, locales, routePath } from '@/lib/routing';
+import { breadcrumbFor, faqSchema, serviceSchema } from '@/lib/schema';
+import { absoluteUrl, pageMetadata } from '@/lib/seo';
 
 import type { Locale } from '@/lib/routing';
 import type { Metadata } from 'next';
@@ -33,7 +36,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const service = getService(requested, slug);
   if (service === undefined) return {};
 
-  return { title: service.title, description: service.description };
+  return pageMetadata({
+    locale: requested,
+    route: 'service',
+    resolveSlug: (target) => translateSlug('service', slug, requested, target),
+    title: service.title,
+    description: service.description,
+  });
 }
 
 /**
@@ -60,8 +69,27 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
   );
   const discipline = content.disciplines.find((item) => item.id === service.discipline);
 
+  const canonical = absoluteUrl(routePath(locale, 'service', service.slug));
+
   return (
     <>
+      <JsonLd
+        data={[
+          serviceSchema(service, canonical),
+          breadcrumbFor(
+            locale,
+            [
+              { name: tNav('home'), route: 'home' },
+              { name: tNav('services'), route: 'services' },
+            ],
+            service.name,
+          ),
+          faqSchema(
+            service.faq.map((entry) => ({ question: entry.question, answer: entry.answer })),
+          ),
+        ]}
+      />
+
       <Container width="bleed" as="section" className="pt-8 pb-section-tight">
         <Breadcrumb
           locale={locale}

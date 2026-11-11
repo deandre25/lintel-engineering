@@ -6,16 +6,40 @@ import { DisciplineList } from '@/components/sections/DisciplineList';
 import { Figures } from '@/components/sections/Figures';
 import { Hero } from '@/components/sections/Hero';
 import { Positioning } from '@/components/sections/Positioning';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Link } from '@/components/ui/Link';
+import { company } from '@/content/company';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { organizationSchema } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { DisciplineGroup } from '@/components/sections/DisciplineList';
+import type { Metadata } from 'next';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const locale = requireLocale((await params).locale);
+  const { home } = getContent(locale);
+
+  /*
+   * The home page is the one route whose title is not run through the
+   * `%s — Lintel Engineering` template: §9 specifies
+   * `Lintel Engineering — {positioning}`, which is the other way round.
+   */
+  return {
+    ...pageMetadata({ locale, route: 'home', title: home.title, description: home.description }),
+    title: { absolute: `${company.name} — ${home.title}` },
+  };
 }
 
 /**
@@ -47,6 +71,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
+      <JsonLd data={organizationSchema(locale)} />
+
       <Hero
         eyebrow={home.hero.eyebrow}
         heading={home.hero.heading}

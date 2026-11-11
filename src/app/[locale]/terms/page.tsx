@@ -2,6 +2,7 @@ import { LegalRoute } from '@/components/sections/LegalRoute';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -17,7 +18,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const page = getContent(locale).legal.terms;
 
-  return { title: page.title, description: page.description };
+  return pageMetadata({
+    locale,
+    route: 'terms',
+    title: page.title,
+    description: page.description,
+  });
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {

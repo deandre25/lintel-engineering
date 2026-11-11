@@ -89,6 +89,17 @@ jobs:
       - name: First-load JS budget
         run: npm run report:bundle
 
+      # Validates every JSON-LD block in the prerendered HTML against the real
+      # schema.org vocabulary: unknown types, unknown properties, and properties
+      # used outside their domain. It reads the build output rather than a
+      # running server, because what matters is what a crawler receives without
+      # executing JavaScript.
+      - name: Fetch the schema.org vocabulary
+        run: curl -sSfL --retry 3 -o schemaorg.jsonld https://schema.org/version/latest/schemaorg-current-https.jsonld
+
+      - name: Validate JSON-LD
+        run: node scripts/validate-jsonld.mjs schemaorg.jsonld
+
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:

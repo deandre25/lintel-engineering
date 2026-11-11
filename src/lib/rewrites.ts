@@ -12,7 +12,15 @@ export interface RewriteRule {
 }
 
 export interface RedirectRule extends RewriteRule {
-  readonly permanent: boolean;
+  /**
+   * 301, not 308.
+   *
+   * Next's `permanent: true` emits 308, which preserves the request method.
+   * §9 asks for 301, and for navigational URLs that is the right answer: these
+   * addresses are only ever fetched with GET, and 301 is what every tool,
+   * every log analyser and every SEO audit expects to see on a migration.
+   */
+  readonly statusCode: 301;
 }
 
 /** Next's path matcher uses `:name` where the route registry uses `[slug]`. */
@@ -51,7 +59,7 @@ export function canonicalLocaleRedirects(): RedirectRule[] {
       .map((locale) => ({
         source: toMatcher(internalTemplate(locale, id)),
         destination: toMatcher(localisedTemplate(locale, id)),
-        permanent: true,
+        statusCode: 301,
       })),
   );
 }

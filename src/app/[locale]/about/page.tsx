@@ -3,12 +3,15 @@ import { getTranslations } from 'next-intl/server';
 import { SectionRule } from '@/components/graphics/SectionRule';
 import { CallToAction } from '@/components/sections/CallToAction';
 import { Figures } from '@/components/sections/Figures';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Container } from '@/components/ui/Container';
 import { getContent } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
+import { breadcrumbFor } from '@/lib/schema';
+import { pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -24,7 +27,12 @@ export async function generateMetadata({
   const locale = requireLocale((await params).locale);
   const { about } = getContent(locale);
 
-  return { title: about.title, description: about.description };
+  return pageMetadata({
+    locale,
+    route: 'about',
+    title: about.title,
+    description: about.description,
+  });
 }
 
 /**
@@ -45,6 +53,10 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
   return (
     <>
       <Container width="bleed" as="section" className="pt-8 pb-section-tight">
+        <JsonLd
+          data={breadcrumbFor(locale, [{ name: tNav('home'), route: 'home' }], tNav('about'))}
+        />
+
         <Breadcrumb
           locale={locale}
           label={t('breadcrumbLabel')}

@@ -44,7 +44,8 @@ test.describe('routing rules', () => {
   test('an untranslated Romanian path redirects to its localised spelling', async ({ request }) => {
     const response = await request.get('/ro/about', { maxRedirects: 0 });
 
-    expect(response.status()).toBe(308);
+    /* 301, not Next's default 308: §9 asks for 301 on permanent moves. */
+    expect(response.status()).toBe(301);
     expect(response.headers().location).toContain('/ro/despre-noi');
   });
 });
@@ -73,5 +74,58 @@ test.describe('language switcher', () => {
 
     await expect(page).toHaveURL(/\/ro$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ro-RO');
+  });
+});
+
+test.describe('legacy redirects', () => {
+  /** §9: a plausible previous structure, redirected permanently to the new one. */
+  const MOVES = [
+    { from: '/services.html', to: '/en/services' },
+    { from: '/despre-noi', to: '/ro/despre-noi' },
+    { from: '/case-studies', to: '/en/work' },
+    {
+      from: '/case-studies/press-line-control-migration',
+      to: '/en/work/press-line-control-migration',
+    },
+  ];
+
+  for (const move of MOVES) {
+    test(`${move.from} moves permanently to ${move.to}`, async ({ request }) => {
+      const response = await request.get(move.from, { maxRedirects: 0 });
+
+      expect(response.status()).toBe(301);
+      expect(response.headers().location).toContain(move.to);
+    });
+  }
+
+  test('a trailing slash resolves to the single canonical spelling', async ({ request }) => {
+    const response = await request.get('/en/services/', { maxRedirects: 0 });
+
+    expect([301, 308]).toContain(response.status());
+    expect(response.headers().location).toContain('/en/services');
+  });
+});
+
+test.describe('crawlable output', () => {
+  test('robots.txt allows the site, blocks the styleguide and names the sitemap', async ({
+    request,
+  }) => {
+    const body = await (await request.get('/robots.txt')).text();
+
+    expect(body).toContain('Allow: /');
+    expect(body).toContain('Disallow: /en/styleguide');
+    expect(body).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
+  });
+
+  test('sitemap.xml lists both locales with alternates and omits noindex routes', async ({
+    request,
+  }) => {
+    const body = await (await request.get('/sitemap.xml')).text();
+
+    expect(body).toContain('<loc>');
+    expect(body).toContain('hreflang="x-default"');
+    expect(body).toContain('/en/services');
+    expect(body).toContain('/ro/servicii');
+    expect(body).not.toContain('styleguide');
   });
 });

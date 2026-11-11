@@ -207,9 +207,14 @@ export function internalPath(locale: Locale, id: RouteId, slug?: string): string
   return joinLocale(locale, fill(routes[id].internal, slug));
 }
 
+/** True when a route must carry `noindex` and stay out of the sitemap. */
+export function isNoindex(id: RouteId): boolean {
+  return routeDefinitions[id].noindex === true;
+}
+
 /** Routes that belong in the sitemap: everything a visitor should find. */
 export function indexableRouteIds(): RouteId[] {
-  return routeIds.filter((id) => routeDefinitions[id].noindex !== true);
+  return routeIds.filter((id) => !isNoindex(id));
 }
 
 /** True when a route's public path is translated away from its internal one. */
