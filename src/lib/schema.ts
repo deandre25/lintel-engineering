@@ -182,17 +182,30 @@ export function faqSchema(entries: readonly FaqEntry[]): JsonLdNode {
   };
 }
 
-/** `CreativeWork` for a case study: it is a report, not a product or a review. */
+/**
+ * `Article` for a case study.
+ *
+ * `CreativeWork` is the generic supertype and says almost nothing; a case study
+ * here is a written narrative with a headline, an author and a date, which is
+ * what `Article` describes. It is also the type that carries article rich
+ * results, so the more specific type is both the more accurate one and the more
+ * useful one.
+ *
+ * The author is the firm rather than a person: these are written by the
+ * practice, and naming an individual would be inventing an attribution.
+ */
 export function caseStudySchema(locale: Locale, caseStudy: CaseStudy, url: string): JsonLdNode {
   return {
     '@context': 'https://schema.org',
-    '@type': 'CreativeWork',
-    name: caseStudy.title,
+    '@type': 'Article',
+    headline: caseStudy.title,
     description: caseStudy.description,
     url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     inLanguage: localeTags[locale],
-    datePublished: String(caseStudy.year),
-    creator: { '@id': organisationId() },
+    datePublished: `${String(caseStudy.year)}-01-01`,
+    author: { '@id': organisationId() },
+    publisher: { '@id': organisationId() },
     about: caseStudy.sector,
   };
 }

@@ -596,3 +596,55 @@ would have had to know the domain of that property to catch it.
 Shape is asserted in the unit suite; validity is asserted against the
 vocabulary in CI. Copying the vocabulary into a test would be copying something
 that drifts.
+
+### 2026-11-11 — robots.txt allows the styleguide, because `noindex` needs to be read
+
+The first version disallowed `/en/styleguide` and `/ro/styleguide` while the
+pages also carried `noindex`. Those two instructions work against each other: a
+crawler has to fetch a page to see its `noindex`, and `Disallow` guarantees it
+never does. A disallowed URL can still surface as a bare link with no
+description if anything points at it, and the `noindex` never takes effect.
+
+Allowing the crawl is what lets the `noindex` be obeyed, so the `Disallow`
+lines are gone and the meta stays. The `Host` directive is also gone: it is a
+Yandex extension that Google ignores, and the canonical tags already state the
+preferred origin.
+
+### 2026-11-11 — Case studies are `Article`, not `CreativeWork`
+
+`CreativeWork` is the generic supertype and asserts almost nothing. A case
+study here is a written narrative with a headline, a date and an author, which
+is what `Article` describes, and `Article` is the type that carries article
+rich results. The more specific type is both the more accurate one and the more
+useful one.
+
+The author is the organisation rather than a person: these are written by the
+practice, and naming an individual would be inventing an attribution.
+
+### 2026-11-11 — Romanian LCP is consistently ~150 ms higher, and it is the locale
+
+Both locales score 100 for performance in 19 of 20 runs; the earlier readings
+of 99 were variance. The LCP difference is not.
+
+| Run order         | `/en` median LCP | `/ro` median LCP |
+| ----------------- | ---------------- | ---------------- |
+| en first, then ro | 758 ms           | 908 ms           |
+| ro first, then en | 758 ms           | 909 ms           |
+
+Five runs per locale per order. Reversing the order was to separate the locale
+from thermal or cache drift across a single session, and it did: Romanian is
+slower in both orders, by the same amount, with a spread of under 10 ms.
+
+What it is not: the documents differ by 749 bytes and 120 characters of visible
+text, and both locales preload exactly the same four font files.
+
+The probable cause, stated as a hypothesis rather than a finding: Romanian text
+needs glyphs from the `latin-ext` subset — ă, â, î, ș, ț — while the English
+page is served entirely by `latin`. First paint on the Romanian page therefore
+waits on a second, larger font file. It is consistent with the measurement and
+with the fact that FCP, Speed Index and LCP are identical within each run,
+which means a single paint rather than a reflow.
+
+Recorded rather than resolved. It is 150 ms inside a budget of 1500 ms, and the
+fix — subsetting the two faces into one file per locale — is a change to the
+font pipeline that Phase 8 is the place for.

@@ -1,28 +1,23 @@
-import { isNoindex, locales, routeIds, routePath, routes } from '@/lib/routing';
 import { absoluteUrl } from '@/lib/seo';
 
 import type { MetadataRoute } from 'next';
 
 /**
- * robots.txt: allow everything, disallow the routes that carry `noindex`, and
- * point at the sitemap (§9).
+ * robots.txt: allow everything, and point at the sitemap (§9).
  *
- * The disallow list is derived from the registry, so a route marked `noindex`
- * is excluded here and from the sitemap by the same flag rather than by two
- * lists that can disagree.
+ * The styleguide is deliberately **not** disallowed, although it carries
+ * `noindex`. The two directives work against each other: a crawler has to
+ * fetch a page to read its `noindex`, and `Disallow` guarantees it never does.
+ * A disallowed URL can still appear in results as a bare link if anything
+ * points at it, with no description, and with no way for the `noindex` to take
+ * effect. Allowing the crawl is what lets the `noindex` be obeyed.
+ *
+ * No `Host` directive: it is a Yandex extension that Google ignores, and the
+ * canonical tags already state the preferred origin.
  */
 export default function robots(): MetadataRoute.Robots {
-  const noindexPaths = routeIds
-    .filter((route) => isNoindex(route) && !routes[route].dynamic)
-    .flatMap((route) => locales.map((locale) => routePath(locale, route as 'styleguide')));
-
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      ...(noindexPaths.length === 0 ? {} : { disallow: noindexPaths }),
-    },
+    rules: { userAgent: '*', allow: '/' },
     sitemap: absoluteUrl('/sitemap.xml'),
-    host: absoluteUrl('/'),
   };
 }
