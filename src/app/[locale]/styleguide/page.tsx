@@ -11,12 +11,12 @@ import { Textarea } from '@/components/ui/Textarea';
 import { TextInput } from '@/components/ui/TextInput';
 import { contrastRatio, formatRatio } from '@/lib/color';
 import { PAIRING_GROUPS } from '@/lib/contrastPairs';
+import { requireLocale } from '@/lib/params';
 import { locales } from '@/lib/routing';
 import { readColorTokens } from '@/lib/tokens';
 
 import { StyleguideSection } from './StyleguideSection';
 
-import type { Locale } from '@/lib/routing';
 import type { Metadata } from 'next';
 
 export function generateStaticParams() {
@@ -78,8 +78,8 @@ const ENQUIRY_OPTIONS = [
   { value: 'energy', label: 'Energy and efficiency audits' },
 ] as const;
 
-export default async function StyleguidePage({ params }: { params: Promise<{ locale: Locale }> }) {
-  const { locale } = await params;
+export default async function StyleguidePage({ params }: { params: Promise<{ locale: string }> }) {
+  const locale = requireLocale((await params).locale);
   const tokens = readColorTokens();
 
   const inkRamp = Object.entries(tokens).filter(([name]) => name.startsWith('ink-'));
