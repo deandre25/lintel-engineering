@@ -40,10 +40,22 @@ export function localisedRewrites(): RewriteRule[] {
   return routeIds.flatMap((id) =>
     locales
       .filter((locale) => hasTranslatedPath(id, locale))
-      .map((locale) => ({
-        source: toMatcher(localisedTemplate(locale, id)),
-        destination: toMatcher(internalTemplate(locale, id)),
-      })),
+      .flatMap((locale) => {
+        const source = toMatcher(localisedTemplate(locale, id));
+        const destination = toMatcher(internalTemplate(locale, id));
+        const rules: RewriteRule[] = [{ source, destination }];
+
+        /*
+         * A page is not the only thing at its address. Next publishes a route's
+         * Open Graph image one segment below it, so the localised spelling has
+         * to reach those too: without this, the canonical page is at
+         * /ro/servicii/<slug> while its image is only reachable at
+         * /ro/services/<slug>/opengraph-image, and the localised form 404s.
+         */
+        rules.push({ source: `${source}/:segments*`, destination: `${destination}/:segments*` });
+
+        return rules;
+      }),
   );
 }
 
