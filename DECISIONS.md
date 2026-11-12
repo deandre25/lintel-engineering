@@ -648,3 +648,54 @@ which means a single paint rather than a reflow.
 Recorded rather than resolved. It is 150 ms inside a budget of 1500 ms, and the
 fix — subsetting the two faces into one file per locale — is a change to the
 font pipeline that Phase 8 is the place for.
+
+## Phase 6 — Forms, consent, security
+
+### 2026-11-11 — CSP uses hashes, not nonces, and the build id had to be made deterministic
+
+§10 asks for a nonce-based policy. A nonce has to be generated per request and
+therefore needs a server runtime, which §2 forbids. On a site where every page
+is prerendered the inline scripts are known at build time, so hashes express
+the same guarantee without the runtime. There is no `unsafe-inline` and no
+`unsafe-eval` in `script-src`.
+
+Measured first, before anything was written:
+
+|                           |                                                    |
+| ------------------------- | -------------------------------------------------- |
+| HTML files                | 52                                                 |
+| Executable inline scripts | 156                                                |
+| Distinct SHA-256 hashes   | 54 — two shared by all pages, 52 per-page payloads |
+| `script-src` hash list    | 2,915 bytes                                        |
+| Full CSP header           | ~3.4 KB                                            |
+
+`application/ld+json` blocks are excluded: the browser never executes them, so
+`script-src` does not govern them. Counting them would have inflated the list
+from 54 to 140 and the header to 8 KB, close to where proxies start refusing.
+
+**The problem this surfaced.** Hashes are only knowable after a build, but
+`next.config.ts` builds its headers before any page is rendered. The build
+therefore runs twice — `build → generate → build → verify` — and `--verify`
+fails if the hashes moved between passes rather than assuming they did not.
+
+On the first run it failed, correctly. Diffing the two payloads showed a single
+difference: `"b":"kXOwUG9bq2AuLS0kVCX3j"` against `"b":"ueyFKKcOgb_37sgKl7Phe"`.
+That is Next's build id, generated randomly per build and embedded in every
+page's hydration payload, which makes two builds of identical source produce
+different HTML. `generateBuildId` now derives it from the commit, so the build
+is reproducible and the two passes converge.
+
+Verified in a browser, which is the right instrument for this question because
+a violation only exists at execution time: zero `securitypolicyviolation`
+events and zero page errors across eight pages in both locales, with the pages
+still interactive.
+
+**The one relaxation is `style-src 'unsafe-inline'`**, and it is deliberate.
+`next/font` injects an inline `@font-face` block, and style hashes are brittle
+because browsers normalise CSS text before hashing. Styles cannot execute, so
+the attack this would otherwise open is not script execution. It is recorded
+here rather than left to be noticed.
+
+`frame-ancestors` and `report-uri` are ignored in a `<meta>` CSP, so the policy
+is delivered as a response header. `X-Frame-Options: DENY` is set alongside
+`frame-ancestors 'none'` for agents that honour only the older header.

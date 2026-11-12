@@ -107,14 +107,26 @@ test.describe('legacy redirects', () => {
 });
 
 test.describe('crawlable output', () => {
-  test('robots.txt allows the site, blocks the styleguide and names the sitemap', async ({
-    request,
-  }) => {
+  test('robots.txt allows everything and names the sitemap', async ({ request }) => {
     const body = await (await request.get('/robots.txt')).text();
 
     expect(body).toContain('Allow: /');
-    expect(body).toContain('Disallow: /en/styleguide');
     expect(body).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
+
+    /*
+     * The styleguide is deliberately not disallowed: a crawler has to fetch a
+     * page to read its `noindex`, so disallowing it would guarantee the rule is
+     * never seen while the URL could still surface bare.
+     */
+    expect(body).not.toContain('Disallow');
+    expect(body).not.toContain('Host:');
+  });
+
+  test('the styleguide is reachable and tells crawlers not to index it', async ({ page }) => {
+    const response = await page.goto('/en/styleguide');
+
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   });
 
   test('sitemap.xml lists both locales with alternates and omits noindex routes', async ({
