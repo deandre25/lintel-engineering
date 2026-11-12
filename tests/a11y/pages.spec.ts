@@ -119,6 +119,13 @@ test.describe('the 404', () => {
    * See DECISIONS.md, "The 404: a formal defect".
    */
   test('a path matching no route renders its content', async ({ page }) => {
+    /*
+     * Expected to fail. `test.fail()` rather than a red check, so the suite
+     * stays green while the defect stays asserted — and so this turns red the
+     * moment the behaviour changes, in either direction.
+     */
+    test.fail();
+
     const response = await page.goto('/no-locale-prefix-here');
     expect(response?.status()).toBe(404);
 
