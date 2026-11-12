@@ -1,6 +1,6 @@
 import { getContent } from '@/content/registry';
-import { indexableRouteIds, locales, routePath, routes } from '@/lib/routing';
-import { absoluteUrl } from '@/lib/seo';
+import { defaultLocale, indexableRouteIds, locales, routePath, routes } from '@/lib/routing';
+import { absoluteUrl, buildAlternates } from '@/lib/seo';
 
 import type { DynamicRouteId, Locale, RouteId, StaticRouteId } from '@/lib/routing';
 import type { MetadataRoute } from 'next';
@@ -43,24 +43,17 @@ function lastModifiedFor(locale: Locale, route: RouteId, slug?: string): Date {
   return new Date();
 }
 
+/**
+ * The `hreflang` set for one route, delegated to the same function that builds
+ * the `<head>` alternates.
+ *
+ * These were two implementations until they were unified. A sitemap whose
+ * `xhtml:link` set disagrees with the page's `<link rel="alternate">` is worse
+ * than having neither, because a crawler reconciles the two and the
+ * disagreement is what it reports. One code path means they cannot drift.
+ */
 function alternatesFor(route: RouteId, slugFor: (locale: Locale) => string | undefined) {
-  const languages: Record<string, string> = {};
-
-  for (const locale of locales) {
-    const slug = slugFor(locale);
-    const path = routes[route].dynamic
-      ? slug === undefined
-        ? undefined
-        : routePath(locale, route as DynamicRouteId, slug)
-      : routePath(locale, route as StaticRouteId);
-
-    if (path !== undefined) languages[locale] = absoluteUrl(path);
-  }
-
-  const defaultUrl = languages.en;
-  if (defaultUrl !== undefined) languages['x-default'] = defaultUrl;
-
-  return languages;
+  return buildAlternates({ locale: defaultLocale, route, resolveSlug: slugFor }).languages;
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -621,33 +621,41 @@ useful one.
 The author is the organisation rather than a person: these are written by the
 practice, and naming an individual would be inventing an attribution.
 
-### 2026-11-11 — Romanian LCP is consistently ~150 ms higher, and it is the locale
+### 2026-11-12 — Romanian LCP: two hypotheses refuted, and a real typography defect found
 
-Both locales score 100 for performance in 19 of 20 runs; the earlier readings
-of 99 were variance. The LCP difference is not.
+Both locales scored 100 for performance throughout; the earlier 99s were
+variance. The LCP difference was not: 758 ms against 908 ms, in both run
+orders, with a spread under 10 ms.
 
-| Run order         | `/en` median LCP | `/ro` median LCP |
-| ----------------- | ---------------- | ---------------- |
-| en first, then ro | 758 ms           | 908 ms           |
-| ro first, then en | 758 ms           | 909 ms           |
+**First hypothesis — the `latin-ext` subset — was refuted by the same paragraph
+that proposed it.** Both locales preloaded the same four font files, so English
+was paying for `latin-ext` too and the subset could not produce the delta.
 
-Five runs per locale per order. Reversing the order was to separate the locale
-from thermal or cache drift across a single session, and it did: Romanian is
-slower in both orders, by the same amount, with a spread of under 10 ms.
+**Second hypothesis — more text, larger paint area — was refuted by
+measurement.** The LCP element is the same `<p>` in both locales, 355x266 px,
+ten lines, 21.3 px type. Identical geometry. Network was within 0.9%: 28
+requests in each, 793,669 against 800,816 bytes. Server time was nil: both
+documents are static files with a TTFB of 0 ms.
 
-What it is not: the documents differ by 749 bytes and 120 characters of visible
-text, and both locales preload exactly the same four font files.
+**The cause was a missing glyph.** `document.fonts.check('17px "Hanken
+Grotesk"', 'ă')` returned `false`. Google Fonts places U+0102/U+0103 — Ă and ă,
+a core Romanian letter — in the **Vietnamese** subset rather than in
+`latin-ext`. The face covering it was listed as `unloaded`, so a Romanian page
+either fetched it at the moment ă was first painted, or fell back to the system
+sans for that one letter. Romanian body text was set in two typefaces at once.
 
-The probable cause, stated as a hypothesis rather than a finding: Romanian text
-needs glyphs from the `latin-ext` subset — ă, â, î, ș, ț — while the English
-page is served entirely by `latin`. First paint on the Romanian page therefore
-waits on a second, larger font file. It is consistent with the measurement and
-with the fact that FCP, Speed Index and LCP are identical within each run,
-which means a single paint rather than a reflow.
+Adding `vietnamese` to the Hanken Grotesk subsets fixes it: `fonts.check` now
+passes for ășțăîâ. Instrument Serif does not need it — its `latin-ext` already
+covers ă, and `next/font` does not offer the subset for that family anyway.
 
-Recorded rather than resolved. It is 150 ms inside a budget of 1500 ms, and the
-fix — subsetting the two faces into one file per locale — is a change to the
-font pipeline that Phase 8 is the place for.
+The cost is visible and is the proof: English LCP moved from 758 ms to 913 ms
+and Romanian stayed at 914 ms. Preloading the fifth file made English pay
+upfront exactly what Romanian had been paying at runtime, which is what the
+150 ms always was.
+
+Both locales now sit at 913 ms against a 1500 ms budget. Equal, and correctly
+typeset. A typographic defect in half the site's content is not worth trading
+for 155 ms of headroom.
 
 ## Phase 6 — Forms, consent, security
 
@@ -678,12 +686,8 @@ from 54 to 140 and the header to 8 KB, close to where proxies start refusing.
 therefore runs twice — `build → generate → build → verify` — and `--verify`
 fails if the hashes moved between passes rather than assuming they did not.
 
-On the first run it failed, correctly. Diffing the two payloads showed a single
-difference: `"b":"kXOwUG9bq2AuLS0kVCX3j"` against `"b":"ueyFKKcOgb_37sgKl7Phe"`.
-That is Next's build id, generated randomly per build and embedded in every
-page's hydration payload, which makes two builds of identical source produce
-different HTML. `generateBuildId` now derives it from the commit, so the build
-is reproducible and the two passes converge.
+On the first run it failed, correctly, and what it found is recorded separately
+below because it is not a CSP matter.
 
 Verified in a browser, which is the right instrument for this question because
 a violation only exists at execution time: zero `securitypolicyviolation`
@@ -695,6 +699,23 @@ still interactive.
 because browsers normalise CSS text before hashing. Styles cannot execute, so
 the attack this would otherwise open is not script execution. It is recorded
 here rather than left to be noticed.
+
+### 2026-11-12 — The build was not reproducible, and that is a defect in its own right
+
+Two builds of identical source produced different HTML. Diffing the hydration
+payloads showed one difference: `"b":"kXOwUG9bq2AuLS0kVCX3j"` against
+`"b":"ueyFKKcOgb_37sgKl7Phe"`. That is Next's build id, generated randomly for
+every build and embedded in every page.
+
+CSP is how this was noticed, but it is not what it affects. A build that does
+not reproduce cannot be verified by comparing artefacts, cannot be cached
+reliably by content, and makes "the deployed bundle is the one from this
+commit" a claim nobody can check. `generateBuildId` now derives the id from the
+commit — from `VERCEL_GIT_COMMIT_SHA` or `GITHUB_SHA` in CI, from
+`git rev-parse HEAD` locally, and from a constant where there is no git at all.
+
+Chunk filenames are content-hashed independently, so cache busting never
+depended on this value.
 
 `frame-ancestors` and `report-uri` are ignored in a `<meta>` CSP, so the policy
 is delivered as a response header. `X-Frame-Options: DENY` is set alongside
