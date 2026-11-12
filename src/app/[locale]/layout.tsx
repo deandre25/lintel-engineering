@@ -2,8 +2,11 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 
+import { Analytics } from '@/components/consent/Analytics';
+import { CookieBanner } from '@/components/consent/CookieBanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SiteHeader } from '@/components/layout/SiteHeader';
+import { Link } from '@/components/ui/Link';
 import { SkipLink } from '@/components/ui/SkipLink';
 import { company } from '@/content/company';
 import { localeTags, locales } from '@/lib/routing';
@@ -69,6 +72,8 @@ export default async function LocaleLayout({
   if (!hasLocale(locales, locale)) notFound();
 
   const t = await getTranslations('nav');
+  const tCookies = await getTranslations('cookies');
+  const analyticsDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
 
   return (
     <html lang={localeTags[locale]} className={fontVariables}>
@@ -86,6 +91,39 @@ export default async function LocaleLayout({
           {children}
         </main>
         <SiteFooter locale={locale} />
+
+        {/*
+         * The banner decides; the loader obeys. No analytics request is made
+         * until the analytics category has been accepted, and the absence of a
+         * choice is never read as consent (§10).
+         */}
+        <CookieBanner
+          labels={{
+            heading: tCookies('heading'),
+            body: tCookies('body'),
+            acceptAll: tCookies('acceptAll'),
+            rejectAll: tCookies('rejectAll'),
+            manage: tCookies('manage'),
+            save: tCookies('save'),
+            necessary: tCookies('necessary'),
+            necessaryDescription: tCookies('necessaryDescription'),
+            analytics: tCookies('analytics'),
+            analyticsDescription: tCookies('analyticsDescription'),
+            preferences: tCookies('preferences'),
+            preferencesDescription: tCookies('preferencesDescription'),
+          }}
+          policyLink={
+            <Link
+              locale={locale}
+              route="cookies"
+              className="underline decoration-rule-strong decoration-1 underline-offset-4"
+            >
+              {tCookies('policyLink')}
+            </Link>
+          }
+        />
+
+        {analyticsDomain === undefined ? null : <Analytics domain={analyticsDomain} />}
       </body>
     </html>
   );

@@ -560,3 +560,47 @@ depended on this value.
 `frame-ancestors` and `report-uri` are ignored in a `<meta>` CSP, so the policy
 is delivered as a response header. `X-Frame-Options: DENY` is set alongside
 `frame-ancestors 'none'` for agents that honour only the older header.
+
+### 2026-11-12 — Zod runs jitless, because the policy has no `unsafe-eval`
+
+The form produced one CSP violation with `blockedURI: "eval"`. Zod v4 compiles
+validators with `new Function` by default, which needs
+`script-src 'unsafe-eval'` — the opposite of what hashing the inline scripts is
+for. `z.config({ jitless: true })` makes it interpret instead, and the
+violation goes. Set in `lib/contact.ts` rather than in the component, because
+the schema is shared with the submit handler and the setting has to hold
+wherever it runs.
+
+### 2026-11-12 — The analytics origin is named in the CSP so the consent gate can be tested
+
+`script-src` names `https://plausible.io`. Without it, CSP would block the
+analytics script regardless of consent, the gate would appear to work for the
+wrong reason, and a regression in the gate would be invisible. One named host,
+no wildcard, and the request still only happens after the category is accepted.
+
+Verified on the network, not on a flag:
+
+|                | Requests to plausible.io                      |
+| -------------- | --------------------------------------------- |
+| No choice made | 0                                             |
+| Reject all     | 0, including after navigating to another page |
+| Accept all     | 2                                             |
+
+### 2026-11-12 — Consent is read with `useSyncExternalStore`
+
+`document.cookie` is an external store. Reading it in an effect body and
+calling `setState` causes a cascading render, which React's own lint rule
+rejects. The hook subscribes to the consent event instead, and caches its
+snapshot against the raw cookie string because `getSnapshot` must return a
+stable reference or React re-renders without end.
+
+The server snapshot is `null`, which is what keeps the banner out of the
+prerendered HTML and means the absence of a cookie is never read as consent.
+
+### 2026-11-12 — The time-to-submit rule is tested in the schema, not through the UI
+
+The e2e test for it was flaky and removed: filling a form with a driver already
+takes longer than the three-second threshold, so the condition could not be
+reproduced. The rule lives in the schema, which both the browser and the submit
+handler run, so that is where it is asserted — along with the honeypot, and the
+check that the anti-spam fields never reach the transport.

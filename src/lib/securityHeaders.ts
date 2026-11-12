@@ -13,6 +13,9 @@ import { join } from 'node:path';
  * There is no `unsafe-inline` and no `unsafe-eval`.
  */
 
+/** The only third-party origin the site may talk to, and only after consent. */
+const ANALYTICS_ORIGIN = 'https://plausible.io';
+
 export interface HeaderRule {
   readonly key: string;
   readonly value: string;
@@ -49,7 +52,13 @@ export function contentSecurityPolicy(): string {
      * `'self'` covers the chunk files; the hashes cover the bootstrap and the
      * per-page hydration payload. Nothing else may execute.
      */
-    `script-src 'self' ${hashes}`.trim(),
+    /*
+     * The analytics host is named here so that declining consent is the only
+     * thing that stops it loading. If CSP blocked it too, the consent gate
+     * would appear to work for the wrong reason and a regression in the gate
+     * would be invisible. One named host, no wildcard.
+     */
+    `script-src 'self' ${ANALYTICS_ORIGIN} ${hashes}`.trim(),
     /*
      * Tailwind emits a stylesheet, but `next/font` injects a small inline style
      * block for the font-face declarations, and style hashes are brittle
@@ -59,8 +68,7 @@ export function contentSecurityPolicy(): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    /* No third-party endpoints: the site makes no cross-origin requests. */
-    "connect-src 'self'",
+    `connect-src 'self' ${ANALYTICS_ORIGIN}`,
     "form-action 'self'",
     /* Both are set: `frame-ancestors` supersedes X-Frame-Options where honoured. */
     "frame-ancestors 'none'",
