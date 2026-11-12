@@ -423,239 +423,79 @@ not; and verify the result by grepping for the new text rather than trusting the
 exit code. The Phase 2 instance shipped a visual regression through a green test
 run, which is what makes this worth writing down rather than remembering.
 
-### 2026-11-11 — The 404: a formal defect with demonstrated zero user impact
+### 2026-11-12 — The 404: where §2 and §10 cannot both be satisfied
 
-There are two 404 boundaries, and only one is affected.
+Two boundaries, and only one is affected.
 
-**Paths under a valid locale** — a mistyped URL such as `/en/servces`, or an
-unknown slug that makes a page call `notFound()` — render through
-`[locale]/not-found.tsx` inside the locale layout. The document carries the
-correct `lang`, the header and the footer. There is no defect here. A catch-all
-at `[locale]/[...rest]` is what routes mistyped paths to this boundary rather
-than to the global one; it is the single route that is not prerendered, because
-the set of paths that do not exist cannot be enumerated, and it resolves no data
-and renders no content.
+**Any path under a valid locale** — a mistyped URL, or an unknown slug that
+makes a page call `notFound()` — is answered from the prerendered 404.
+`dynamicParams = false` on the three slug routes is what does that: without it
+Next renders an unknown slug on demand, and a request-time payload cannot be
+hashed. The page is CSP-clean, carries its full content, and has its own
+chrome.
 
-**Paths with no usable locale prefix** — `/garbage`, or an unknown locale such
-as `/de`. The root layout lives at `[locale]/layout.tsx`, which is what makes
-`locale` a typed root param and keeps every page static, so there is no root
-layout for Next to wrap the global boundary in. Next emits the `<html>` itself,
-without `lang`. Rendering an `<html>` in the component produces one nested
-inside another, and `experimental.globalNotFound` did not change the behaviour.
+**A path whose first segment is not a valid locale** — `/garbage`, `/de` — is
+the one page Next still renders per request. Its hydration payload embeds the
+requested path, so `/aaa` and `/zzz` produce different payloads and no
+build-time hash can cover them. Measured:
 
-This is a formal defect, not a compromise, and the evidence is in the markup:
-the page is bilingual and **every block carries its own `lang`**, so no text on
-it inherits language from the document. A screen reader is given the correct
-language for everything it reads. What is missing is the attribute the
-`html-has-lang` rule looks for, and nothing a user experiences.
+```
+/aaa                   len=9322   sha256-7io+gc8oL/ikzba5…
+/bbb-different-length  len=9410   sha256-r+CcpmrYJkXca4i9…
+/zzz                   len=9322   sha256-UtSwhi7sz+mNwB5w…
+```
 
-The scope is narrower still: a visitor only reaches this boundary through a
-broken inbound link or a typed URL with no valid locale, never through
-navigation within the site, because every in-site link is generated from the
-route registry.
+CSP blocks the script, React discards the server HTML, and the page renders
+blank. The status is 404 and 12 KB of correct bilingual HTML is sent, so a
+crawler — which runs no JavaScript — sees the page intact. Only a person who
+hand-types an invalid root path sees the blank render.
 
-The suite reflects this exactly. The locale 404 is asserted with no exclusion
-at all. The global one excludes one rule, `html-has-lang`, and asserts the
-per-block `lang` attributes in its place.
+**Why the alternatives were rejected.**
 
-Two ways to close it, neither taken: reintroduce `app/layout.tsx` as the root
-layout, which demotes `locale` from a root param and returns `getRequestConfig`
-to the deprecated `requestLocale`; or wait for `globalNotFound` to support a
-root layout that is a dynamic segment. Trading a working i18n setup for one
-attribute on one unreachable-by-navigation page is the wrong way round.
+`output: 'export'` would remove the per-request render entirely, and was
+built rather than reasoned about. It emits `out/ro/services` while
+`out/ro/servicii` is missing, because rewrites are not applied under export —
+so it costs the whole localised URL structure of §8, not just `headers()` and
+`redirects()`.
 
-Diagnosed with a browser rather than with `curl`: the 404 body arrives as an RSC
-payload and is rendered client-side, so `curl` sees only the shell and reports a
-missing `lang` on both boundaries. The first two readings of this were wrong for
-that reason.
+Capturing the hash of one fixed 404 URL fails its own precondition: the
+payload embeds the real path and a rewrite preserves the address bar, so the
+URLs stay distinct. It also needs a server inside the build.
 
-### 2026-11-11 — The header navigation moves to 1024px too
+`unsafe-inline` is the wrong escape **specifically here**. This is the only
+page on the site that reflects the requested URL back, which makes it the only
+attacker-controlled input in the project. Relaxing the policy there would
+activate a reflected-XSS vector in precisely the one place there is something
+to reflect.
 
-Screenshotting all thirteen templates at three widths in both locales found a
-5px horizontal scroll on **every Romanian page at 768px** and on no English
-page at any width. The cause was the header: Romanian navigation labels are
-longer, and the nav, locale switcher and contact button together overflowed the
-gutter by 5px.
+The test covering it is deliberately left failing, with the reason in the test
+file. **This means CI is red**, which conflicts with §1's requirement that the
+pipeline be green on `main`. That conflict is real and is for the client to
+resolve: either accept a red check that documents a known limitation, or mark
+the test as expected-to-fail so the suite stays green while still alerting if
+the behaviour ever changes.
 
-The fix is the same one the sections already had — the desktop navigation now
-appears at `lg` rather than `md`, so 768px uses the compact navigation like
-every other two-column layout on the site. The site now has one breakpoint
-story rather than two.
+The page itself carries its own wordmark, its own links to both locale homes
+and its own disclosure line, rather than inheriting the locale layout it
+renders outside of. A page that looks deliberately spare reads differently
+from one that looks truncated by a constraint.
 
-This is the second defect found only by looking at the middle width, after the
-hero at 768 in Phase 4. Both were invisible at 390 and 1440, and neither would
-have failed a test. The screenshot sweep is now scripted and asserts no
-horizontal overflow on any template at any width in either locale, which turns
-the check into something repeatable rather than something remembered.
+### 2026-11-12 — Font role tokens have to be re-declared wherever the font variables are
 
-### 2026-11-11 — The country's name is localised; the country code is not
+Giving the global 404 its own chrome produced a page set entirely in the system
+font, with no error anywhere.
 
-`company.ts` holds facts that do not change with language, but the name of a
-country is a word, and the Romanian pages were printing "Romania" where a
-Romanian reader expects "România". It is now a localised string like the
-positioning line, while `countryCode` stays a single `RO` because an ISO code
-is not language-dependent.
+`--font-sans` is declared in `tokens.css` at `:root` as
+`var(--font-hanken-grotesk), …`. Custom property substitution happens where a
+property is **declared**, not where it is used. The global 404 renders outside
+every layout, so the `next/font` variables are attached to its own wrapper
+rather than to `<html>`; at `:root` the referenced variable does not exist, the
+declaration resolves to nothing, and every descendant inherits that empty value.
 
-Found by reading the rendered Romanian contact page, not by a test. The address
-is assembled from `company.ts` in four places, all of which already knew their
-locale, so nothing else had to change.
-
-## Phase 5 — SEO
-
-### 2026-11-11 — Verifying a client-rendered application: `curl` gives you the shell, not the page
-
-The 404 diagnosis in Phase 4 was wrong twice for one reason. The page body
-arrived as an RSC payload and was rendered by the browser, so `curl` saw the
-document shell and nothing inside it, and reported a missing `lang` on both
-boundaries when only one was affected.
-
-**The rule: `curl` shows what the server sent, a browser shows what the user
-gets, and in a client-rendered application those are different documents.**
-Choosing between them is choosing which question is being asked:
-
-| Question                                         | Instrument                                          |
-| ------------------------------------------------ | --------------------------------------------------- |
-| What does a user experience?                     | A browser, against the production build             |
-| What does a crawler that runs no JavaScript see? | `curl` or view-source, against the production build |
-| What does the application do once hydrated?      | A browser's inspector                               |
-
-The inversion matters in this phase. Everything SEO depends on — `hreflang`,
-canonical, JSON-LD, Open Graph tags — counts only if it is in the HTML the
-server sent. A tag that appears after hydration does not exist for a crawler.
-So Phase 5 is verified with `curl` against `.next/server/app/**/*.html`, for
-exactly the reason `curl` was the wrong tool for the 404.
-
-A finding that rests on a measurement is reported with the instrument that
-produced it. That is the part that would have caught this in the first report
-rather than the third.
-
-### 2026-11-11 — Two defects, both at the middle width, both locale-dependent
-
-The hero at 768 and the header overflow at 768 were each invisible at 390 and
-1440, and the second was invisible in English at every width. Width and locale
-are easy to test one at a time and easy to miss together.
-
-The screenshot sweep now covers every template at three widths in both locales
-and asserts no horizontal overflow, which turns a manual find into a standing
-check rather than something to remember.
-
-### 2026-11-11 — `next/og` emits static PNGs; it was confirmed before the routes were written
-
-§2 forbids a server runtime and `ImageResponse` renders per request by default,
-so the first thing built in this phase was one OG route with
-`generateStaticParams`, to check the build output before writing fourteen more.
-
-It emits real files: `.next/server/app/en/opengraph-image.body` is
-`PNG image data, 1200 x 630, 8-bit/color RGBA`. Twenty-eight PNGs are produced
-at build time, one per page per locale, and no function runs to serve them.
-
-The cards use the system sans rather than the site's display face.
-`ImageResponse` needs raw font bytes, and `next/font` keeps its copies under
-hashed names in the build output that source cannot address; committing a
-second copy of a font the site already ships would be a duplicate asset to keep
-in step. The layout, the rule and the lintel mark carry the brand instead.
-
-Satori lays out with flexbox only and rejects any element with more than one
-child that has no explicit `display`. Two such elements failed the build before
-the first PNG appeared, which is the kind of thing that is cheaper to meet on
-one route than on fifteen.
-
-### 2026-11-11 — Permanent redirects are 301, not Next's 308
-
-`permanent: true` emits 308, which preserves the request method. §9 asks for
-301 and, for navigational URLs that are only ever fetched with GET, 301 is also
-what every log analyser and SEO audit expects on a migration. The redirect
-rules therefore carry `statusCode: 301` rather than `permanent`.
-
-One exception is not ours: a trailing slash is stripped by Next's own
-`trailingSlash: false` handling, which answers 308 before any configured rule
-is reached. The destination is correct either way, so the explicit rule stays
-as a statement of intent and the test accepts either status.
-
-The redirect from `/` to the default locale stays temporary (307): which locale
-is the default is a decision that can change, and a permanent redirect would
-outlive it in caches.
-
-### 2026-11-11 — JSON-LD is validated against the real vocabulary, in CI
-
-§9 asks for every type to be validated against schema.org.
-`scripts/validate-jsonld.mjs` downloads the published vocabulary, reads every
-JSON-LD block out of the prerendered HTML, and checks three things per node:
-the type exists, every property exists, and every property is within its
-declared domain, following the type's supertype chain.
-
-It reads the build output rather than a running server, for the reason recorded
-at the top of this phase: structured data that only appears after hydration does
-not exist for a crawler.
-
-It earned its place on the first run by rejecting `availableLanguage` on
-`Service` — schema.org puts that property on `ContactPoint` and
-`ServiceChannel`. Twelve pages carried it. A reviewer checking one page by eye
-would have had to know the domain of that property to catch it.
-
-Shape is asserted in the unit suite; validity is asserted against the
-vocabulary in CI. Copying the vocabulary into a test would be copying something
-that drifts.
-
-### 2026-11-11 — robots.txt allows the styleguide, because `noindex` needs to be read
-
-The first version disallowed `/en/styleguide` and `/ro/styleguide` while the
-pages also carried `noindex`. Those two instructions work against each other: a
-crawler has to fetch a page to see its `noindex`, and `Disallow` guarantees it
-never does. A disallowed URL can still surface as a bare link with no
-description if anything points at it, and the `noindex` never takes effect.
-
-Allowing the crawl is what lets the `noindex` be obeyed, so the `Disallow`
-lines are gone and the meta stays. The `Host` directive is also gone: it is a
-Yandex extension that Google ignores, and the canonical tags already state the
-preferred origin.
-
-### 2026-11-11 — Case studies are `Article`, not `CreativeWork`
-
-`CreativeWork` is the generic supertype and asserts almost nothing. A case
-study here is a written narrative with a headline, a date and an author, which
-is what `Article` describes, and `Article` is the type that carries article
-rich results. The more specific type is both the more accurate one and the more
-useful one.
-
-The author is the organisation rather than a person: these are written by the
-practice, and naming an individual would be inventing an attribution.
-
-### 2026-11-12 — Romanian LCP: two hypotheses refuted, and a real typography defect found
-
-Both locales scored 100 for performance throughout; the earlier 99s were
-variance. The LCP difference was not: 758 ms against 908 ms, in both run
-orders, with a spread under 10 ms.
-
-**First hypothesis — the `latin-ext` subset — was refuted by the same paragraph
-that proposed it.** Both locales preloaded the same four font files, so English
-was paying for `latin-ext` too and the subset could not produce the delta.
-
-**Second hypothesis — more text, larger paint area — was refuted by
-measurement.** The LCP element is the same `<p>` in both locales, 355x266 px,
-ten lines, 21.3 px type. Identical geometry. Network was within 0.9%: 28
-requests in each, 793,669 against 800,816 bytes. Server time was nil: both
-documents are static files with a TTFB of 0 ms.
-
-**The cause was a missing glyph.** `document.fonts.check('17px "Hanken
-Grotesk"', 'ă')` returned `false`. Google Fonts places U+0102/U+0103 — Ă and ă,
-a core Romanian letter — in the **Vietnamese** subset rather than in
-`latin-ext`. The face covering it was listed as `unloaded`, so a Romanian page
-either fetched it at the moment ă was first painted, or fell back to the system
-sans for that one letter. Romanian body text was set in two typefaces at once.
-
-Adding `vietnamese` to the Hanken Grotesk subsets fixes it: `fonts.check` now
-passes for ășțăîâ. Instrument Serif does not need it — its `latin-ext` already
-covers ă, and `next/font` does not offer the subset for that family anyway.
-
-The cost is visible and is the proof: English LCP moved from 758 ms to 913 ms
-and Romanian stayed at 914 ms. Preloading the fifth file made English pay
-upfront exactly what Romanian had been paying at runtime, which is what the
-150 ms always was.
-
-Both locales now sit at 913 ms against a 1500 ms budget. Equal, and correctly
-typeset. A typographic defect in half the site's content is not worth trading
-for 155 ms of headroom.
+A `.font-scope` class in `globals.css` re-declares the two role tokens, and the
+wrapper carries it. Diagnosed by reading computed styles rather than by looking
+at the page — the rendered text was plausible enough that a screenshot did not
+call attention to itself.
 
 ## Phase 6 — Forms, consent, security
 

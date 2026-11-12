@@ -1,4 +1,6 @@
+import { BrandMark } from '@/components/graphics/BrandMark';
 import { Container } from '@/components/ui/Container';
+import { company } from '@/content/company';
 import { localeTags, locales, routePath } from '@/lib/routing';
 
 import enMessages from '../../../messages/en.json';
@@ -7,20 +9,20 @@ import roMessages from '../../../messages/ro.json';
 const MESSAGES = { en: enMessages.notFound, ro: roMessages.notFound };
 
 /**
- * The 404, in both languages.
+ * The 404, in both languages, carrying its own chrome.
  *
- * Bilingual rather than localised, and deliberately so. Next renders a 404
- * without route params, so neither boundary that can reach this component
- * knows which language the visitor was reading. Guessing would show a Romanian
- * visitor an English page; showing both shows everyone their own.
+ * Bilingual by necessity: Next renders a 404 without route params, so neither
+ * boundary that reaches this component knows which language the visitor was
+ * reading. Guessing would show a Romanian visitor an English page.
  *
  * Every block carries its own `lang`, so no text here inherits language from
  * the document. That is what makes the missing `lang` on the shell Next owns a
  * formal defect rather than one a user experiences.
  *
- * One component, used by both `app/not-found.tsx` and
- * `app/[locale]/not-found.tsx`, so a visitor sees the same page whichever
- * boundary Next picks.
+ * It brings its own wordmark and its own way back rather than inheriting the
+ * locale layout, because the global boundary renders outside every layout. A
+ * page that looks deliberately spare reads differently from one that looks
+ * truncated by a constraint, and the difference costs one header row.
  */
 export function NotFoundBody() {
   return (
@@ -31,6 +33,15 @@ export function NotFoundBody() {
        * reason the page is.
        */}
       <title>{`${MESSAGES.en.title} — ${MESSAGES.ro.title}`}</title>
+
+      <Container width="bleed" as="header" className="border-b border-rule py-5">
+        <a href={routePath('en', 'home')} className="inline-flex items-center gap-3 text-primary">
+          <BrandMark size={20} className="text-accent" />
+          <span className="font-display text-h6 tracking-tight whitespace-nowrap">
+            {company.name}
+          </span>
+        </a>
+      </Container>
 
       <Container width="bleed" as="section" className="pt-section-tight pb-section">
         <p className="font-display text-h2 leading-tight text-accent tabular-nums">404</p>
@@ -73,6 +84,14 @@ export function NotFoundBody() {
             );
           })}
         </div>
+      </Container>
+
+      <Container
+        width="bleed"
+        as="footer"
+        className="mt-auto border-t border-rule py-6 text-micro text-muted"
+      >
+        <p>{enMessages.footer.disclosure}</p>
       </Container>
     </>
   );
