@@ -47,7 +47,7 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
               <br />
               {company.address.postalCode} {company.address.city}
               <br />
-              {company.address.country}
+              {company.address.country[locale]}
             </address>
           </div>
 

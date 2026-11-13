@@ -382,3 +382,120 @@ The closing section sits on `--ink-900`, where the primary button's dark fill is
 invisible. A fourth variant inverts it — a paper fill with an `--ink-900` label
 at 17.2:1 — and its disabled state uses `--ink-600` with `--ink-200` at 7.1:1.
 Both pairings are in the asserted contrast list.
+
+### 2026-11-10 — The Romanian names reserved roles the English does not
+
+The English service pages decline to claim accreditation in general terms. The
+Romanian pages name three specific roles — `verificator de proiecte atestat`,
+`expert tehnic atestat` and `auditor energetic autorizat` — and state that
+Lintel holds none of them.
+
+**This asymmetry is correct and must not be "fixed" into a literal match.**
+Those roles are reserved in Romanian law, and a reader in the sector reads a
+service name as a claim to the attestation. The English has no such reading,
+because the roles do not exist in English. Localisation means saying what a
+reader of that language will understand, which here means saying more.
+
+Three Romanian service labels were renamed for the same reason, because a name
+in navigation, a card or a page title carries no disclaimer beside it:
+
+| Was                                   | Now                                  |
+| ------------------------------------- | ------------------------------------ |
+| Audit energetic                       | Eficiență energetică și conformitate |
+| Verificarea proiectelor               | Analiza independentă a proiectelor   |
+| Certificarea construcțiilor existente | Evaluarea construcțiilor existente   |
+
+In each pair the regulated word was the second one. The Romanian home page's
+meta description lost "certificare structurală" for the same reason: a meta
+description appears in search results with nothing beside it.
+
+### 2026-11-10 — Working practice: an edit that does not match must fail loudly
+
+Three edits in Phase 4 and one in Phase 2 silently did nothing. The cause is
+the same each time: `prettier-plugin-tailwindcss` reorders class lists after a
+file is written, so an edit matching remembered text no longer matches the file.
+A string replacement that finds nothing is not an error by default — it writes
+the file back unchanged and reports success.
+
+The practice, from here on: read the file as it currently stands before editing
+it; make every replacement assert that its target was found and abort if it was
+not; and verify the result by grepping for the new text rather than trusting the
+exit code. The Phase 2 instance shipped a visual regression through a green test
+run, which is what makes this worth writing down rather than remembering.
+
+### 2026-11-11 — The 404: a formal defect with demonstrated zero user impact
+
+There are two 404 boundaries, and only one is affected.
+
+**Paths under a valid locale** — a mistyped URL such as `/en/servces`, or an
+unknown slug that makes a page call `notFound()` — render through
+`[locale]/not-found.tsx` inside the locale layout. The document carries the
+correct `lang`, the header and the footer. There is no defect here. A catch-all
+at `[locale]/[...rest]` is what routes mistyped paths to this boundary rather
+than to the global one; it is the single route that is not prerendered, because
+the set of paths that do not exist cannot be enumerated, and it resolves no data
+and renders no content.
+
+**Paths with no usable locale prefix** — `/garbage`, or an unknown locale such
+as `/de`. The root layout lives at `[locale]/layout.tsx`, which is what makes
+`locale` a typed root param and keeps every page static, so there is no root
+layout for Next to wrap the global boundary in. Next emits the `<html>` itself,
+without `lang`. Rendering an `<html>` in the component produces one nested
+inside another, and `experimental.globalNotFound` did not change the behaviour.
+
+This is a formal defect, not a compromise, and the evidence is in the markup:
+the page is bilingual and **every block carries its own `lang`**, so no text on
+it inherits language from the document. A screen reader is given the correct
+language for everything it reads. What is missing is the attribute the
+`html-has-lang` rule looks for, and nothing a user experiences.
+
+The scope is narrower still: a visitor only reaches this boundary through a
+broken inbound link or a typed URL with no valid locale, never through
+navigation within the site, because every in-site link is generated from the
+route registry.
+
+The suite reflects this exactly. The locale 404 is asserted with no exclusion
+at all. The global one excludes one rule, `html-has-lang`, and asserts the
+per-block `lang` attributes in its place.
+
+Two ways to close it, neither taken: reintroduce `app/layout.tsx` as the root
+layout, which demotes `locale` from a root param and returns `getRequestConfig`
+to the deprecated `requestLocale`; or wait for `globalNotFound` to support a
+root layout that is a dynamic segment. Trading a working i18n setup for one
+attribute on one unreachable-by-navigation page is the wrong way round.
+
+Diagnosed with a browser rather than with `curl`: the 404 body arrives as an RSC
+payload and is rendered client-side, so `curl` sees only the shell and reports a
+missing `lang` on both boundaries. The first two readings of this were wrong for
+that reason.
+
+### 2026-11-11 — The header navigation moves to 1024px too
+
+Screenshotting all thirteen templates at three widths in both locales found a
+5px horizontal scroll on **every Romanian page at 768px** and on no English
+page at any width. The cause was the header: Romanian navigation labels are
+longer, and the nav, locale switcher and contact button together overflowed the
+gutter by 5px.
+
+The fix is the same one the sections already had — the desktop navigation now
+appears at `lg` rather than `md`, so 768px uses the compact navigation like
+every other two-column layout on the site. The site now has one breakpoint
+story rather than two.
+
+This is the second defect found only by looking at the middle width, after the
+hero at 768 in Phase 4. Both were invisible at 390 and 1440, and neither would
+have failed a test. The screenshot sweep is now scripted and asserts no
+horizontal overflow on any template at any width in either locale, which turns
+the check into something repeatable rather than something remembered.
+
+### 2026-11-11 — The country's name is localised; the country code is not
+
+`company.ts` holds facts that do not change with language, but the name of a
+country is a word, and the Romanian pages were printing "Romania" where a
+Romanian reader expects "România". It is now a localised string like the
+positioning line, while `countryCode` stays a single `RO` because an ISO code
+is not language-dependent.
+
+Found by reading the rendered Romanian contact page, not by a test. The address
+is assembled from `company.ts` in four places, all of which already knew their
+locale, so nothing else had to change.

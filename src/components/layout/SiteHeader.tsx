@@ -46,7 +46,7 @@ export async function SiteHeader({ locale }: SiteHeaderProps) {
           <Wordmark locale={locale} />
 
           <div className="flex items-center gap-6">
-            <nav aria-label={t('label')} className="hidden md:block">
+            <nav aria-label={t('label')} className="hidden lg:block">
               <ul className="flex items-center gap-6">
                 {NAV_ROUTES.map((route) => (
                   <li key={route}>
@@ -62,19 +62,19 @@ export async function SiteHeader({ locale }: SiteHeaderProps) {
               </ul>
             </nav>
 
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <LocaleSwitcher current={locale} options={localeOptions} label={tSwitcher('label')} />
             </div>
 
             <Link
               locale={locale}
               route="contact"
-              className="hidden border border-ink-900 px-4 py-2 text-caption font-medium text-primary transition-colors hover:bg-ink-900 hover:text-inverse md:inline-block"
+              className="hidden border border-ink-900 px-4 py-2 text-caption font-medium text-primary transition-colors hover:bg-ink-900 hover:text-inverse lg:inline-block"
             >
               {t('contact')}
             </Link>
 
-            <div className="flex items-center gap-4 md:hidden">
+            <div className="flex items-center gap-4 lg:hidden">
               <LocaleSwitcher current={locale} options={localeOptions} label={tSwitcher('label')} />
               <MobileNav
                 locale={locale}

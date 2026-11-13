@@ -4,62 +4,115 @@ import { expect, test } from '@playwright/test';
 import { getContent } from '../../src/content/registry';
 import { locales, routePath } from '../../src/lib/routing';
 
+import type { Locale } from '../../src/lib/routing';
+
 /**
- * Accessibility of the page templates built in Phase 4.
+ * Accessibility of every page template, in both locales.
  *
- * One page per template per locale, rather than every page: the templates are
- * what vary, and the content below them is validated elsewhere. Romanian is
- * scanned as well as English because `lang`, hyphenation and the longer words
- * change how a page lays out.
+ * One page per template rather than every page: the templates are what vary,
+ * and the content inside them is validated elsewhere. Romanian is scanned as
+ * well as English because `lang`, word length and diacritics change how a page
+ * wraps, and wrapping is what breaks a layout.
  */
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-for (const locale of locales) {
+function templatePaths(locale: Locale): { name: string; path: string }[] {
   const content = getContent(locale);
-
-  /*
-   * `noUncheckedIndexedAccess` makes these possibly-undefined, and a test that
-   * silently skipped because content was empty would be worse than one that
-   * fails loudly here.
-   */
   const service = content.services.at(0);
   const caseStudy = content.caseStudies.at(0);
-  if (service === undefined || caseStudy === undefined) {
+  const insight = content.insights.at(0);
+
+  if (service === undefined || caseStudy === undefined || insight === undefined) {
     throw new Error(`No content to scan for locale ${locale}`);
   }
 
+  return [
+    { name: 'home', path: routePath(locale, 'home') },
+    { name: 'services index', path: routePath(locale, 'services') },
+    { name: 'service', path: routePath(locale, 'service', service.slug) },
+    { name: 'work index', path: routePath(locale, 'work') },
+    { name: 'case study', path: routePath(locale, 'caseStudy', caseStudy.slug) },
+    { name: 'about', path: routePath(locale, 'about') },
+    { name: 'insights index', path: routePath(locale, 'insights') },
+    { name: 'insight', path: routePath(locale, 'insight', insight.slug) },
+    { name: 'contact', path: routePath(locale, 'contact') },
+    { name: 'careers', path: routePath(locale, 'careers') },
+    { name: 'legal', path: routePath(locale, 'privacy') },
+  ];
+}
+
+for (const locale of locales) {
   test.describe(`${locale} page templates`, () => {
-    test('home has no axe violations', async ({ page }) => {
-      await page.goto(routePath(locale, 'home'));
-
-      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-      expect(results.violations).toEqual([]);
-    });
-
-    test('a service page has no axe violations', async ({ page }) => {
-      await page.goto(routePath(locale, 'service', service.slug));
-
-      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-      expect(results.violations).toEqual([]);
-    });
-
-    test('a case study has no axe violations', async ({ page }) => {
-      await page.goto(routePath(locale, 'caseStudy', caseStudy.slug));
-
-      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-      expect(results.violations).toEqual([]);
-    });
-
-    test('every page template has exactly one h1', async ({ page }) => {
-      for (const path of [
-        routePath(locale, 'home'),
-        routePath(locale, 'service', service.slug),
-        routePath(locale, 'caseStudy', caseStudy.slug),
-      ]) {
+    for (const { name, path } of templatePaths(locale)) {
+      test(`${name} has no axe violations`, async ({ page }) => {
         await page.goto(path);
-        await expect(page.locator('h1'), path).toHaveCount(1);
+
+        const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+        expect(results.violations).toEqual([]);
+      });
+    }
+
+    test('every template has exactly one h1 and no skipped heading levels', async ({ page }) => {
+      for (const { name, path } of templatePaths(locale)) {
+        await page.goto(path);
+        await expect(page.locator('h1'), `${name}: h1 count`).toHaveCount(1);
+
+        /*
+         * A skipped level — h2 straight to h4 — is a real navigation failure
+         * for screen-reader users and is not covered by any axe rule here.
+         */
+        const levels = await page
+          .locator('h1, h2, h3, h4, h5, h6')
+          .evaluateAll((nodes) => nodes.map((node) => Number(node.tagName.slice(1))));
+
+        const skips = levels
+          .map((level, index) => ({ level, previous: levels[index - 1] ?? level }))
+          .filter((entry) => entry.level - entry.previous > 1);
+
+        expect(skips, `${name}: skipped heading levels`).toEqual([]);
       }
     });
   });
 }
+
+test.describe('the 404', () => {
+  test('a mistyped path under a locale gets the localised document', async ({ page }) => {
+    const response = await page.goto('/ro/aceasta-pagina-nu-exista');
+    expect(response?.status()).toBe(404);
+
+    /* It renders through the locale layout, so it inherits lang and chrome. */
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ro-RO');
+    await expect(page.getByRole('banner')).toBeVisible();
+
+    /* Bilingual, because a 404 is rendered without route params. */
+    await expect(page.getByText('Pagina aceasta nu există')).toBeVisible();
+    await expect(page.getByText('That page does not exist')).toBeVisible();
+  });
+
+  test('a path under a locale has no axe violations', async ({ page }) => {
+    await page.goto('/en/this-page-does-not-exist');
+
+    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('a path with no locale prefix is correct apart from the shell Next owns', async ({
+    page,
+  }) => {
+    const response = await page.goto('/no-locale-prefix-here');
+    expect(response?.status()).toBe(404);
+
+    /*
+     * This is the only page without a root layout to wrap it, so Next emits the
+     * `<html>` itself and without `lang`. Every block inside carries its own
+     * `lang`, asserted below, so no text inherits language from the document.
+     */
+    await expect(page.locator('section[lang="en-GB"]')).toBeVisible();
+    await expect(page.locator('section[lang="ro-RO"]')).toBeVisible();
+
+    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+    const ours = results.violations.filter((violation) => violation.id !== 'html-has-lang');
+    expect(ours).toEqual([]);
+  });
+});

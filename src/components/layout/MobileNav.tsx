@@ -71,7 +71,7 @@ export function MobileNav({ locale, items, openLabel, closeLabel, navLabel }: Mo
   }
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         ref={triggerRef}
         type="button"

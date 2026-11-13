@@ -43,17 +43,17 @@ export const careers = careersSchema.parse({
   vacancies: [
     {
       slug: 'inginer-structurist-evaluare',
-      title: 'Inginer structurist, evaluare și certificare',
+      title: 'Inginer structurist, evaluarea construcțiilor existente',
       discipline: 'structures',
       location: 'Brașov, cu deplasări în România și Ungaria',
       commitment: 'Normă întreagă, perioadă nedeterminată',
       experience: 'Minimum patru ani în proiectare sau evaluare structurală',
       summary:
-        'Evaluarea și certificarea construcțiilor existente: hale industriale, căi de rulare și infrastructură care trebuie să preia mai mult decât a fost proiectată.',
+        'Evaluarea construcțiilor existente: hale industriale, căi de rulare și infrastructură care trebuie să preia mai mult decât a fost proiectată.',
       responsibilities: [
         'Realizarea evaluărilor de structuri existente, de la releveu până la raportul emis.',
         'Reconstituirea traseului încărcărilor din geometria măsurată acolo unde calculele originale lipsesc.',
-        'Verificarea proiectelor altor ingineri față de normativul și anexa națională aplicabile.',
+        'Analiza independentă a proiectelor altor ingineri față de normativul și anexa națională aplicabile.',
         'Prezentarea constatărilor clienților și, unde procedura o cere, autorității care analizează dosarul.',
       ],
       requirements: [
