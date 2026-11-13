@@ -604,3 +604,34 @@ takes longer than the three-second threshold, so the condition could not be
 reproduced. The rule lives in the schema, which both the browser and the submit
 handler run, so that is where it is asserted — along with the honeypot, and the
 check that the anti-spam fields never reach the transport.
+
+### 2026-11-13 — The first-load budget is the landing page's, with a ceiling for the rest
+
+CI caught the contact page at 179.5 KB against a 140 KB gate. The cause is
+real and expected: that page ships react-hook-form, its resolver and Zod, and
+no other page pays for them.
+
+Re-reading §1, the budget it sets is specific — "First-load JS, **landing
+page**". The script had been applying it to all fifty routes, which is
+stricter than the brief and penalises a leaf page for a dependency it needs.
+
+Two figures now: 140 KB for `/en` and `/ro`, the pages a visitor arrives on and
+the ones Lighthouse measures; 185 KB as a ceiling for everything else, high
+enough for the form and low enough that a runaway import still fails the build.
+
+The gate was right to fire. Widening it to the brief's actual scope is the
+correct response; raising it for everything would not have been.
+
+### 2026-11-13 — CI never ran outside one machine until the artifact bug was fixed
+
+Both the link check and Lighthouse failed on every run with "Artifact not found
+for name: next-build", and the build job had logged a warning rather than an
+error: `actions/upload-artifact@v4` skips hidden files by default, and `.next`
+is a hidden directory, so nothing was ever uploaded.
+
+Each job now builds for itself. That costs about half a minute per job and
+removes the artifact entirely rather than configuring around its defaults.
+
+CI also only triggered on pull requests targeting `main`. The phases are a
+chain, so five of the six PRs targeted the previous phase and had no checks at
+all — the pipeline looked green because it had not run.
