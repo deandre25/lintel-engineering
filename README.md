@@ -17,8 +17,8 @@ Lighthouse, mobile profile, throttled, median of five runs per locale, taken fro
 
 | Locale | Performance | Accessibility | Best Practices | SEO | LCP    | CLS   | TBT   |
 | ------ | ----------- | ------------- | -------------- | --- | ------ | ----- | ----- |
-| `/en`  | 100         | 100           | 100            | 100 | 919 ms | 0.000 | 47 ms |
-| `/ro`  | 100         | 100           | 100            | 100 | 913 ms | 0.000 | 36 ms |
+| `/en`  | 100         | 100           | 100            | 100 | 913 ms | 0.000 | 17 ms |
+| `/ro`  | 100         | 100           | 100            | 100 | 911 ms | 0.000 | 16 ms |
 
 First-load JavaScript, gzipped:
 
