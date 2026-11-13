@@ -1,0 +1,51 @@
+O migrare de sistem de automatizare are două părți. Una este ingineria: configurarea platformei noi, maparea semnalelor, scrierea și testarea logicii. Cealaltă este secvențierea: a decide ce se schimbă și când, și ce face linia în timp ce se schimbă.
+
+Prima parte este bine înțeleasă și rareori acolo eșuează migrările. A doua este cea care le face să eșueze și este tratată de obicei ca un exercițiu de planificare făcut după ce ingineria a fost stabilită. Ar trebui făcută prima, pentru că ea determină ingineria.
+
+## Planul furnizorului și calendarul fabricii
+
+Un furnizor căruia i se cere să planifice o migrare va propune o singură comutare, pentru că este ingineria cea mai curată și cel mai ușor de ofertat. Se oprește totul, se demontează sistemul vechi, se montează cel nou, iar punerea în funcțiune durează până când merge.
+
+Fabrica, între timp, are un calendar: ferestre de mentenanță, perioade de oprire, un program de livrări cu termene contractuale. Acestea conțin rareori un bloc suficient de lung pentru planul curat, iar atunci când îl conțin, nu are nicio rezervă în interior. Un plan cu o singură comutare care întâlnește o surpriză în ziua a treia nu are unde să pună surpriza.
+
+Alternativa este să împarți linia în tronsoane care pot fi comutate independent și să le migrezi în mai multe opriri scurte. Asta înseamnă mai multă muncă de inginerie: ai nevoie de interfețe între tronsoanele migrate și cele nemigrate, deci de traducere între două platforme pe durata lucrării. Este mai scump la proiectare și considerabil mai ieftin ca risc.
+
+## Ce decide dacă împărțirea este posibilă
+
+Trei lucruri, aproximativ în ordinea aceasta.
+
+**Tamponarea.** Dacă linia are tampoane intermediare, tronsoanele dintre ele sunt limite naturale de migrare, pentru că funcționează deja semi-independent. O linie fără tamponare nicăieri este un candidat mult mai dificil, iar asta trebuie stabilit înainte să se proiecteze orice.
+
+**Topologia interblocajelor.** Interblocajele de securitate care traversează toată linia, în loc să fie pe tronsoane, sunt obstacolul obișnuit. Nu pot fi migrate pe jumătate și, frecvent, nici nu au fost desenate ca sistem de la bun început. Cartați-le înainte să vă angajați într-un plan de împărțire.
+
+**Utilitățile comune.** Aerul comprimat, hidraulica, exhaustarea și comanda lor tind să fie pe toată linia. Decideți devreme dacă acestea migrează primele, ultimele, sau rămân pe platforma veche în spatele unei interfețe.
+
+## Funcționarea în paralel este locul unde apar surprizele
+
+Cea mai valoroasă parte a unei migrări pe tronsoane este perioada în care ambele sisteme merg simultan: platforma nouă citește aceleași intrări, calculează ce ar comanda și nu poate comanda nimic.
+
+Aceasta nu este o testare în sensul obișnuit. Este observarea fabricii în producție reală, inclusiv în condițiile care nu apar niciodată la test: deblocări, intervenții ale operatorului, secvența particulară de la schimbul de tură, comportamentul unui senzor aflat la limită, dar nedefect.
+
+Fiecare migrare pe care am condus-o a găsit comportament nedocumentat în timpul funcționării în paralel. Pe o linie de prese, lista de semnale avea 1.412 puncte, iar fabrica avea 1.431; printre cele nouăsprezece era un interblocaj cablat, adăugat la o reparație cu ani în urmă și nedesenat niciodată. Funcționa, avea un rol de securitate și nimic din pachetul de migrare nu știa că există.
+
+Acel interblocaj se comporta la deblocare altfel decât ar fi descris oricine. Găsit în funcționarea în paralel, înseamnă o după-amiază de analiză și o modificare de logică. Găsit în timpul comutării, înseamnă linia oprită, antreprenorul pe teren și fereastra deja consumată.
+
+## Cuantificarea onestă a funcționării în paralel
+
+Nu este gratuită. Costă un al doilea set de licențe, o perioadă de întreținere a două sisteme, spațiu în tablou și cablaj pentru intrările dublate și disciplina de a lăsa sistemul nou fără posibilitatea de a acționa cât timp observă. Pe o linie lungă, perioada aceea poate ajunge la câteva săptămâni.
+
+Cu toate acestea, pe orice linie care nu poate fi tamponată mult timp, este mai ieftină decât alternativa, iar comparația nu este strânsă. Costul funcționării în paralel este cunoscut dinainte și plătibil în condiții calme. Costul descoperirii aceluiași comportament în timpul unei opriri este necunoscut, plătibil sub presiune și vine însoțit de pierdere de producție.
+
+## Scrierea criteriilor de acceptanță înainte de începerea lucrării
+
+Celălalt lucru care trebuie decis întâi este ce înseamnă terminat.
+
+Criteriile de acceptanță scrise după începerea punerii în funcțiune se negociază față de ce s-a realizat deja, iar punerea în funcțiune se termină când toată lumea este obosită. Criteriile scrise dinainte și convenite împreună de fabrică și de furnizor dau punerii în funcțiune o condiție de final care ține de dovezi.
+
+Faceți-le măsurabile: cadență susținută pe o perioadă definită, randament la prima trecere, un set definit de condiții de avarie provocate și remediate, comportamentul alarmelor confirmat. Separați explicit ce blochează producția de ce este o deficiență de remediat ulterior, pentru că această separare se va discuta în contradictoriu exact în cel mai prost moment, dacă este lăsată deschisă.
+
+## Ordinea în care se face
+
+Stabiliți calendarul de producție. Cartați interblocajele și tamponarea. Decideți împărțirea pe tronsoane. Abia apoi proiectați migrarea în jurul acestor constrângeri și scrieți criteriile de acceptanță înainte ca cineva să configureze un controler.
+
+Ingineria este partea simplă. Secvența este cea care decide dacă linia repornește la data promisă.

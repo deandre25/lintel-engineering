@@ -1,0 +1,51 @@
+A control system migration has two parts. One is engineering: configuring the new platform, mapping the I/O, writing and testing the logic. The other is sequencing: deciding what changes when, and what the line is doing while it changes.
+
+The first part is well understood and is rarely where migrations fail. The second is where they fail, and it is usually treated as a scheduling exercise to be done after the engineering is settled. It should be done first, because it determines the engineering.
+
+## The vendor plan and the plant calendar
+
+A vendor asked to plan a migration will propose a single cutover, because it is the cleanest engineering and the easiest to quote. Everything stops, the old system is removed, the new one goes in, commissioning runs until it works.
+
+The plant, meanwhile, has a calendar: maintenance windows, shutdown periods, a build schedule with contractual delivery dates. These rarely contain a single block long enough for the clean plan, and when they do contain one, it has no contingency inside it. A single-cutover plan that encounters a surprise on day three has nowhere to put the surprise.
+
+The alternative is to divide the line into sections that can be cut over independently and migrate them across several shorter stops. This is more engineering work: you need interfaces between migrated and unmigrated sections, which means translation between two control platforms for the duration. It is more expensive in design and considerably cheaper in risk.
+
+## What decides whether sectioning is possible
+
+Three things, in roughly this order.
+
+**Buffering.** If the line has intermediate buffers, the sections between them are natural migration boundaries, because they already operate semi-independently. A line with no buffering anywhere is a much harder candidate, and that should be established before anything else is designed.
+
+**Interlock topology.** Safety interlocks that span the whole line rather than individual sections are the usual obstacle. They cannot be half-migrated, and they frequently were not drawn as a system in the first place. Map these before committing to a sectioning plan.
+
+**Shared services.** Compressed air, hydraulics, extraction and the control of them tend to be line-wide. Decide early whether these migrate first, last, or stay on the old platform behind a gateway.
+
+## Parallel running is where the surprises appear
+
+The most valuable part of a sectioned migration is the period where both systems run simultaneously: the new platform reading the same inputs as the old, computing what it would command, and unable to command anything.
+
+This is not a test in the usual sense. It is observation of the plant under real production, including the conditions that never appear in a test: jam recoveries, operator interventions, the particular sequence that happens at shift change, the behaviour of a sensor that is marginal but not failed.
+
+Every migration we have run has found undocumented behaviour during parallel running. On one press line, the I/O schedule listed 1,412 points and the plant had 1,431; among the nineteen was a hardwired interlock added during a repair years earlier and never drawn. It was functioning, it was carrying a safety duty, and nothing in the migration package knew it was there.
+
+That interlock behaved differently during a jam recovery than anyone would have described. Found during parallel running, it is an afternoon of analysis and a logic change. Found during a cutover, it is the line down, a contractor on site, and a window already spent.
+
+## Costing parallel running honestly
+
+It is not free. It costs a second set of licences, a period of maintaining two systems, panel space and cabling for the duplicated inputs, and the discipline to leave the new system unable to act while it watches. On a long line that period may run to several weeks.
+
+It is nonetheless cheaper than the alternative on any line that cannot be buffered for long, and the comparison is not close. The cost of parallel running is known in advance and payable in calm conditions. The cost of discovering the same behaviour during a shutdown is unknown, payable under pressure, and comes with production loss attached.
+
+## Writing the acceptance criteria before the work starts
+
+The other thing that should be decided first is what finished means.
+
+Acceptance criteria written after commissioning begins are negotiated against whatever has been achieved, and commissioning ends when everybody is tired. Criteria written beforehand and agreed by the plant and the vendor together give commissioning an end condition that is a matter of evidence.
+
+Make them measurable: rate sustained over a defined period, first-pass yield, a defined set of fault conditions exercised and recovered, alarm behaviour confirmed. Distinguish explicitly between what blocks production and what is a defect to be fixed afterwards, because that distinction will be argued about at the worst possible moment if it is left open.
+
+## The order to do it in
+
+Establish the production calendar. Map the interlocks and the buffering. Decide the sectioning. Then design the migration around those constraints, and write the acceptance criteria before anybody configures a controller.
+
+The engineering is the straightforward part. It is the sequence that determines whether the line comes back when it was promised.
