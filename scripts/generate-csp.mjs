@@ -107,17 +107,23 @@ if (files.length === 0) {
 }
 
 const hashes = new Set();
+/** Per-file counts, kept only so an oversized list can explain itself. */
+const perFile = [];
 
 for (const file of files) {
   const html = await readFile(file, 'utf8');
+  let count = 0;
 
   for (const match of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
     const [, attributes = '', body = ''] = match;
     if (/\ssrc=/.test(attributes)) continue;
     if (/type="application\/ld\+json"/.test(attributes)) continue;
 
+    count += 1;
     hashes.add(`sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}`);
   }
+
+  perFile.push({ file: file.slice(ROOT.length + 1), count });
 }
 
 const sorted = [...hashes].sort();
@@ -139,6 +145,19 @@ if (replacement.length > HEADER_LIMIT) {
       'limit. The host rejects an oversized routing config with an error that names neither ' +
       'this script nor the policy, so it is failed here instead.',
   );
+  /*
+   * The size is a symptom; the cause is how many inline scripts each page
+   * carries, which differs between environments. Locally every page has
+   * three. Printing the worst offenders and where they live is what tells
+   * the difference between a real policy and a scan of the wrong files.
+   */
+  perFile.sort((a, b) => b.count - a.count);
+  console.error(`  ${String(files.length)} files scanned. Highest inline-script counts:`);
+  for (const { file, count } of perFile.slice(0, 8)) {
+    console.error(`    ${String(count).padStart(4)}  ${file}`);
+  }
+  const total = perFile.reduce((sum, entry) => sum + entry.count, 0);
+  console.error(`  ${String(total)} inline scripts in total, ${String(sorted.length)} distinct.`);
   process.exit(1);
 }
 
