@@ -24,10 +24,16 @@ export interface HeaderRule {
 /**
  * Reads the hashes produced by `scripts/generate-csp.mjs`.
  *
- * Absent on the first pass of a two-pass build, and on a dev server. Returning
- * an empty list there is deliberate: the policy is still emitted, just without
- * hashes, so a missing file breaks the inline scripts loudly in development
- * rather than silently weakening the shipped policy.
+ * The file is committed. It has to be, because `headers()` runs before any
+ * page is rendered, so a build cannot compute the hashes it needs for its own
+ * headers. The two-pass build regenerates it, and the committed copy is what
+ * makes the first pass — and a host that only ever runs one — correct.
+ *
+ * Committing a generated file is only safe if it can be proved to match what
+ * is actually served, and that proof is `scripts/verify-deployment.mjs`: it
+ * loads the deployed URL in a browser and fails on any CSP violation. If a
+ * hosted build ever produced different HTML, the hashes would stop matching
+ * and that check would say so, against the real site rather than a local one.
  */
 function inlineScriptHashes(): string[] {
   try {
