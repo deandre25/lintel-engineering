@@ -1,4 +1,4 @@
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet';
+export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'inverse';
 
 export type ButtonSize = 'md' | 'sm';
 
@@ -26,6 +26,13 @@ const VARIANT: Record<ButtonVariant, string> = {
     'hover:bg-ink-900 hover:text-inverse',
     'disabled:border-ink-200 disabled:text-muted',
     'disabled:hover:bg-transparent disabled:hover:text-muted',
+  ].join(' '),
+  /* For the inverse surface, where a dark fill would be invisible. */
+  inverse: [
+    'border border-paper bg-paper text-primary',
+    'hover:border-ink-100 hover:bg-ink-100',
+    'disabled:border-ink-600 disabled:bg-ink-600 disabled:text-ink-200',
+    'disabled:hover:border-ink-600 disabled:hover:bg-ink-600',
   ].join(' '),
   quiet: [
     'border border-transparent bg-transparent text-primary',

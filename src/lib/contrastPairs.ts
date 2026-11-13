@@ -35,6 +35,7 @@ export const TEXT_PAIRINGS: readonly ContrastPairing[] = [
   { foreground: 'accent-on-dark', background: 'ink-900', usage: 'accent text, inverse' },
   { foreground: 'paper', background: 'ink-800', usage: 'text on the secondary inverse surface' },
   { foreground: 'ink-600', background: 'ink-200', usage: 'disabled button label' },
+  { foreground: 'ink-200', background: 'ink-600', usage: 'disabled button label, inverse' },
 ];
 
 /** Focus rings and borders, which WCAG treats as interface components at 3:1. */

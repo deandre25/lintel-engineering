@@ -15,8 +15,13 @@ const TOKENS_PATH = join(process.cwd(), 'src', 'styles', 'tokens.css');
 
 const HEX_DECLARATION = /^\s*--([a-z0-9-]+):\s*(#[0-9a-fA-F]{3,6});/gm;
 
-export function readColorTokens(path: string = TOKENS_PATH): Record<string, string> {
-  const css = readFileSync(path, 'utf8');
+export function readColorTokens(): Record<string, string> {
+  /*
+   * The path is a constant rather than a parameter so Next can see it is
+   * statically scoped. With a parameter, tracing cannot prove what is read and
+   * includes the entire project in the server output.
+   */
+  const css = readFileSync(TOKENS_PATH, 'utf8');
   const tokens: Record<string, string> = {};
 
   for (const match of css.matchAll(HEX_DECLARATION)) {

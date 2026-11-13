@@ -101,7 +101,7 @@ export const services: readonly Service[] = z
         {
           question: 'Puteți da o cifră înainte de releveu?',
           answer:
-            'Putem da un interval și cele două-trei constatări care l-ar modifica. O cifră dată înainte ca cineva să fi fost pe teren este o presupunere, nu o estimare.',
+            'Putem da un interval și cele două-trei constatări care l-ar modifica. O cifră dată înainte ca cineva să fi fost pe teren este o ghiceală, nu o estimare.',
         },
       ],
       relatedCaseStudy: 'steel-hall-crane-recertification',

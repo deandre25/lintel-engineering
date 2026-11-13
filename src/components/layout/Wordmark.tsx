@@ -29,7 +29,9 @@ export function Wordmark({ locale, className }: WordmarkProps) {
         size={20}
         className="text-accent transition-colors group-hover:text-accent-strong"
       />
-      <span className="font-display text-h6 leading-tight tracking-tight">{company.name}</span>
+      <span className="font-display text-h6 leading-tight tracking-tight whitespace-nowrap">
+        {company.name}
+      </span>
     </Link>
   );
 }
