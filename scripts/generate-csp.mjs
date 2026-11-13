@@ -77,6 +77,23 @@ const unchanged =
   previous.length === sorted.length && previous.every((hash, index) => hash === sorted[index]);
 
 if (verifyOnly) {
+  /*
+   * An empty list means the policy shipped with no hashes and every inline
+   * script is blocked — the site renders and does not hydrate. That is what
+   * happened on the first deployment: the host ran `next build` directly
+   * rather than this package's two-pass script, so the file never existed
+   * when the headers were built. A green build and Lighthouse 100 were both
+   * true while nothing on the page worked, so this is now an error.
+   */
+  if (sorted.length === 0) {
+    console.error(
+      'No inline script hashes were found. The policy would ship with an empty\n' +
+        'script-src and nothing would hydrate. Check that the build ran this\n' +
+        "package's build script rather than `next build` directly.",
+    );
+    process.exit(1);
+  }
+
   if (!unchanged) {
     console.error(
       'Inline script hashes changed between build passes.\n' +

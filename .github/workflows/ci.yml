@@ -208,3 +208,32 @@ jobs:
           name: lighthouse-reports
           path: .lighthouseci/
           retention-days: 7
+
+  # Runs against the live site after a push to main, not against a local
+  # build. CI was green and Lighthouse scored 100 on every category while the
+  # deployed site did not hydrate at all, because both measure a build on this
+  # runner and a rendered document, and neither clicks anything.
+  deployment:
+    name: Deployed site
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # Vercel builds on the same push, so wait for the new deployment to be
+      # the one answering before asserting anything about it.
+      - name: Wait for the deployment to update
+        run: sleep 90
+
+      - name: Verify the deployed site hydrates
+        run: npm run verify:deployment -- "${{ vars.DEPLOYMENT_URL || 'https://lintel-engineering.vercel.app' }}"
