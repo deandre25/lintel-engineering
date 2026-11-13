@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SkipLink } from '@/components/ui/SkipLink';
 import { company } from '@/content/company';
 import { localeTags, locales } from '@/lib/routing';
+import { siteOrigin } from '@/lib/seo';
 import { fontVariables } from '@/styles/fonts';
 
 import '@/styles/globals.css';
@@ -42,6 +43,11 @@ export async function generateMetadata({
   const resolved: Locale = hasLocale(locales, locale) ? locale : 'en';
 
   return {
+    /*
+     * Every relative URL in metadata — Open Graph images in particular — is
+     * resolved against this, so a crawler is given absolute URLs.
+     */
+    metadataBase: new URL(siteOrigin()),
     title: {
       default: `${company.name} — ${company.positioning[resolved]}`,
       template: `%s — ${company.name}`,

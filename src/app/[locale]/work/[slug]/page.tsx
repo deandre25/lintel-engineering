@@ -4,13 +4,16 @@ import { getTranslations } from 'next-intl/server';
 import { PortalFrame } from '@/components/graphics/PortalFrame';
 import { SectionRule } from '@/components/graphics/SectionRule';
 import { CallToAction } from '@/components/sections/CallToAction';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
-import { getCaseStudy, getContent, slugsFor } from '@/content/registry';
+import { getCaseStudy, getContent, slugsFor, translateSlug } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
-import { isLocale, locales } from '@/lib/routing';
+import { isLocale, locales, routePath } from '@/lib/routing';
+import { breadcrumbFor, caseStudySchema } from '@/lib/schema';
+import { absoluteUrl, pageMetadata } from '@/lib/seo';
 
 import type { Locale } from '@/lib/routing';
 import type { Metadata } from 'next';
@@ -33,7 +36,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const caseStudy = getCaseStudy(requested, slug);
   if (caseStudy === undefined) return {};
 
-  return { title: caseStudy.title, description: caseStudy.description };
+  return pageMetadata({
+    locale: requested,
+    route: 'caseStudy',
+    resolveSlug: (target) => translateSlug('caseStudy', slug, requested, target),
+    title: caseStudy.title,
+    description: caseStudy.description,
+  });
 }
 
 /**
@@ -74,8 +83,24 @@ export default async function CaseStudyPage({ params }: { params: Promise<Params
     { index: '04', block: caseStudy.reflection },
   ];
 
+  const canonical = absoluteUrl(routePath(locale, 'caseStudy', caseStudy.slug));
+
   return (
     <>
+      <JsonLd
+        data={[
+          caseStudySchema(locale, caseStudy, canonical),
+          breadcrumbFor(
+            locale,
+            [
+              { name: tNav('home'), route: 'home' },
+              { name: tNav('work'), route: 'work' },
+            ],
+            caseStudy.title,
+          ),
+        ]}
+      />
+
       <Container width="bleed" as="section" className="pt-8 pb-section-tight">
         <Breadcrumb
           locale={locale}

@@ -499,3 +499,100 @@ is not language-dependent.
 Found by reading the rendered Romanian contact page, not by a test. The address
 is assembled from `company.ts` in four places, all of which already knew their
 locale, so nothing else had to change.
+
+## Phase 5 — SEO
+
+### 2026-11-11 — Verifying a client-rendered application: `curl` gives you the shell, not the page
+
+The 404 diagnosis in Phase 4 was wrong twice for one reason. The page body
+arrived as an RSC payload and was rendered by the browser, so `curl` saw the
+document shell and nothing inside it, and reported a missing `lang` on both
+boundaries when only one was affected.
+
+**The rule: `curl` shows what the server sent, a browser shows what the user
+gets, and in a client-rendered application those are different documents.**
+Choosing between them is choosing which question is being asked:
+
+| Question                                         | Instrument                                          |
+| ------------------------------------------------ | --------------------------------------------------- |
+| What does a user experience?                     | A browser, against the production build             |
+| What does a crawler that runs no JavaScript see? | `curl` or view-source, against the production build |
+| What does the application do once hydrated?      | A browser's inspector                               |
+
+The inversion matters in this phase. Everything SEO depends on — `hreflang`,
+canonical, JSON-LD, Open Graph tags — counts only if it is in the HTML the
+server sent. A tag that appears after hydration does not exist for a crawler.
+So Phase 5 is verified with `curl` against `.next/server/app/**/*.html`, for
+exactly the reason `curl` was the wrong tool for the 404.
+
+A finding that rests on a measurement is reported with the instrument that
+produced it. That is the part that would have caught this in the first report
+rather than the third.
+
+### 2026-11-11 — Two defects, both at the middle width, both locale-dependent
+
+The hero at 768 and the header overflow at 768 were each invisible at 390 and
+1440, and the second was invisible in English at every width. Width and locale
+are easy to test one at a time and easy to miss together.
+
+The screenshot sweep now covers every template at three widths in both locales
+and asserts no horizontal overflow, which turns a manual find into a standing
+check rather than something to remember.
+
+### 2026-11-11 — `next/og` emits static PNGs; it was confirmed before the routes were written
+
+§2 forbids a server runtime and `ImageResponse` renders per request by default,
+so the first thing built in this phase was one OG route with
+`generateStaticParams`, to check the build output before writing fourteen more.
+
+It emits real files: `.next/server/app/en/opengraph-image.body` is
+`PNG image data, 1200 x 630, 8-bit/color RGBA`. Twenty-eight PNGs are produced
+at build time, one per page per locale, and no function runs to serve them.
+
+The cards use the system sans rather than the site's display face.
+`ImageResponse` needs raw font bytes, and `next/font` keeps its copies under
+hashed names in the build output that source cannot address; committing a
+second copy of a font the site already ships would be a duplicate asset to keep
+in step. The layout, the rule and the lintel mark carry the brand instead.
+
+Satori lays out with flexbox only and rejects any element with more than one
+child that has no explicit `display`. Two such elements failed the build before
+the first PNG appeared, which is the kind of thing that is cheaper to meet on
+one route than on fifteen.
+
+### 2026-11-11 — Permanent redirects are 301, not Next's 308
+
+`permanent: true` emits 308, which preserves the request method. §9 asks for
+301 and, for navigational URLs that are only ever fetched with GET, 301 is also
+what every log analyser and SEO audit expects on a migration. The redirect
+rules therefore carry `statusCode: 301` rather than `permanent`.
+
+One exception is not ours: a trailing slash is stripped by Next's own
+`trailingSlash: false` handling, which answers 308 before any configured rule
+is reached. The destination is correct either way, so the explicit rule stays
+as a statement of intent and the test accepts either status.
+
+The redirect from `/` to the default locale stays temporary (307): which locale
+is the default is a decision that can change, and a permanent redirect would
+outlive it in caches.
+
+### 2026-11-11 — JSON-LD is validated against the real vocabulary, in CI
+
+§9 asks for every type to be validated against schema.org.
+`scripts/validate-jsonld.mjs` downloads the published vocabulary, reads every
+JSON-LD block out of the prerendered HTML, and checks three things per node:
+the type exists, every property exists, and every property is within its
+declared domain, following the type's supertype chain.
+
+It reads the build output rather than a running server, for the reason recorded
+at the top of this phase: structured data that only appears after hydration does
+not exist for a crawler.
+
+It earned its place on the first run by rejecting `availableLanguage` on
+`Service` — schema.org puts that property on `ContactPoint` and
+`ServiceChannel`. Twelve pages carried it. A reviewer checking one page by eye
+would have had to know the domain of that property to catch it.
+
+Shape is asserted in the unit suite; validity is asserted against the
+vocabulary in CI. Copying the vocabulary into a test would be copying something
+that drifts.

@@ -24,7 +24,8 @@
     "test:visual": "playwright test --project=visual",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "typegen": "next typegen",
-    "report:bundle": "node scripts/report-bundle-size.mjs --budget-kb 140"
+    "report:bundle": "node scripts/report-bundle-size.mjs --budget-kb 140",
+    "validate:jsonld": "node scripts/validate-jsonld.mjs"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree": {

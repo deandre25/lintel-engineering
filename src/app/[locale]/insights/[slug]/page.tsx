@@ -2,14 +2,17 @@ import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { createElement } from 'react';
 
+import { JsonLd } from '@/components/seo/JsonLd';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
 import { Prose } from '@/components/ui/Prose';
 import { getArticleBody } from '@/content/articles';
-import { getInsight, slugsFor } from '@/content/registry';
+import { getInsight, slugsFor, translateSlug } from '@/content/registry';
 import { requireLocale } from '@/lib/params';
-import { isLocale, locales } from '@/lib/routing';
+import { isLocale, locales, routePath } from '@/lib/routing';
+import { articleSchema, breadcrumbFor } from '@/lib/schema';
+import { absoluteUrl, pageMetadata } from '@/lib/seo';
 
 import type { Metadata } from 'next';
 
@@ -29,11 +32,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const insight = getInsight(requested, slug);
   if (insight === undefined) return {};
 
-  return {
+  return pageMetadata({
+    locale: requested,
+    route: 'insight',
+    resolveSlug: (target) => translateSlug('insight', slug, requested, target),
     title: insight.title,
     description: insight.description,
-    authors: [{ name: insight.author }],
-  };
+    publishedTime: insight.publishedAt,
+    authors: [insight.author],
+  });
 }
 
 /**
@@ -65,8 +72,24 @@ export default async function InsightPage({ params }: { params: Promise<Params> 
   const articleBody = getArticleBody(locale, insight.id);
   if (articleBody === undefined) notFound();
 
+  const canonical = absoluteUrl(routePath(locale, 'insight', insight.slug));
+
   return (
     <Container width="bleed" as="article" className="pt-8 pb-section">
+      <JsonLd
+        data={[
+          articleSchema(locale, insight, canonical, `${canonical}/opengraph-image`),
+          breadcrumbFor(
+            locale,
+            [
+              { name: tNav('home'), route: 'home' },
+              { name: tNav('insights'), route: 'insights' },
+            ],
+            insight.title,
+          ),
+        ]}
+      />
+
       <Breadcrumb
         locale={locale}
         label={t('breadcrumbLabel')}
