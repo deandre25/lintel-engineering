@@ -635,3 +635,47 @@ removes the artifact entirely rather than configuring around its defaults.
 CI also only triggered on pull requests targeting `main`. The phases are a
 chain, so five of the six PRs targeted the previous phase and had no checks at
 all — the pipeline looked green because it had not run.
+
+## 2026-11-13 — The deployed site cannot be measured by polling it
+
+`verify-deployment.mjs` was run against the live URL on a loop while waiting
+for a redeploy. After roughly a hundred requests the host began answering
+`HTTP 403` with `x-vercel-mitigated: challenge` and a body containing one
+obfuscated inline script and no `src=` scripts at all.
+
+That body is not the site. Every "the deployed policy names zero hashes"
+reading taken locally after that point was a measurement of the challenge
+page, not of Lintel. The readings from CI are unaffected — a GitHub runner
+made one request per run and got the real application, which is why its
+report still shows `the consent banner renders: ok`.
+
+Recorded because the failure is indistinguishable from the defect being
+investigated: both present as a page with no working interactivity and a
+policy that does not match. The check itself is sound; running it in a loop
+is what made it lie. Post-deploy verification runs once per deploy.
+
+## 2026-11-13 — An unmatched single-segment URL renders blank under the policy
+
+`/nope` is not the global 404. A single-segment path matches the `[locale]`
+route, `requireLocale()` rejects it, and `notFound()` renders the _localised_
+404 as a stream rather than from a prerendered file. The body arrives only in
+the inline flight payload, and that payload embeds the requested path:
+
+| URL           | hash of the flight script                     |
+| ------------- | --------------------------------------------- |
+| `/nope`       | `sha256-HKsX6tKFl1kGBsWOfn5GB1H3LCW+maWlb/Z…` |
+| `/other-nope` | `sha256-MFRvljnKzlqPMiWzgcgJzFej3W7hen7Si1y…` |
+| `/a/b/c`      | `sha256-+bdpxJ4BfBU7L+kKAI/ss/H22uigFvasYuY…` |
+
+Three URLs, three hashes. The set is unbounded, so no hash list can cover it.
+Under `next start` the script is blocked, hydration aborts with React #412,
+and the page is blank — there is no server-rendered content to fall back to.
+
+This is the page the brief's reviewer already singled out as "the only
+attacker-controlled input anywhere in the project", and it is the one place
+where that property and a hash-based policy are in direct conflict.
+
+Found by a visual baseline, which is the instrument that catches it: the page
+returns 404 with valid markup and a correct `<title>`, so a status check and a
+`curl` both pass. Not yet confirmed against the host, which is currently
+challenging automated requests. Open.
