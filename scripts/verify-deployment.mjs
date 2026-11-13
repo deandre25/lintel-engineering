@@ -44,22 +44,44 @@ function check(ok, description, detail) {
 
 console.log(`Verifying ${origin}\n`);
 
-/* 1. The served policy must name hashes, not just 'self'. */
+/*
+ * 1. The served policy must name hashes, not just 'self'.
+ *
+ * `script-src` is delivered per page in a `<meta http-equiv>` tag rather than
+ * as a header: the whole-site hash list is 35 KB, over four times what the
+ * host will carry. So the hashes are read out of the markup, and the header
+ * is checked only for what a meta policy cannot express.
+ */
 const headResponse = await fetch(`${origin}/en`, { redirect: 'follow' });
-const policy = headResponse.headers.get('content-security-policy') ?? '';
+const header = headResponse.headers.get('content-security-policy') ?? '';
+const html = await headResponse.text();
+
+const metaMatch = /<meta http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html);
+const policy = metaMatch?.[1] ?? '';
 const hashCount = (policy.match(/'sha256-/g) ?? []).length;
 
 check(headResponse.status === 200, `GET /en responds 200`, `got ${String(headResponse.status)}`);
-check(policy !== '', 'a Content-Security-Policy header is present');
+check(policy !== '', 'the page carries a Content-Security-Policy meta tag');
+check(
+  /frame-ancestors/.test(header),
+  'the header carries the directives a meta tag ignores',
+  `header was ${header || '(absent)'}`,
+);
 check(
   hashCount > 0,
   'script-src names inline script hashes',
   `found ${String(hashCount)}; an empty list blocks hydration entirely`,
 );
+/*
+ * The meta tag has to precede every inline script, or the ones above it run
+ * before any policy exists.
+ */
+const firstInline = html.search(/<script(?![^>]*\ssrc=)(?![^>]*ld\+json)[^>]*>/);
 check(
-  !policy.includes('unsafe-inline') || !/script-src[^;]*unsafe-inline/.test(policy),
-  "script-src does not contain 'unsafe-inline'",
+  metaMatch !== null && firstInline > -1 && html.indexOf(metaMatch[0]) < firstInline,
+  'the policy precedes every inline script',
 );
+check(!/script-src[^;]*unsafe-inline/.test(policy), "script-src does not contain 'unsafe-inline'");
 check(!/script-src[^;]*unsafe-eval/.test(policy), "script-src does not contain 'unsafe-eval'");
 
 const browser = await chromium.launch();

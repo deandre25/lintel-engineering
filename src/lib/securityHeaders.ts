@@ -1,17 +1,12 @@
 /**
  * Security response headers (§10).
  *
- * The Content-Security-Policy names the SHA-256 hash of every inline script in
- * the build output rather than carrying a nonce. A nonce has to be generated
- * per request, which needs a server runtime; §2 forbids one, and on a site
- * where every page is prerendered the inline scripts are known at build time,
- * so hashes express exactly the same guarantee without the runtime.
+ * The Content-Security-Policy is split in two. This file carries the
+ * directives that only work as a header; `scripts/generate-csp.mjs` injects
+ * the rest, including `script-src` and its hashes, into each page's `<head>`.
  *
- * There is no `unsafe-inline` and no `unsafe-eval`.
+ * There is no `unsafe-inline` for scripts and no `unsafe-eval` anywhere.
  */
-
-/** The only third-party origin the site may talk to, and only after consent. */
-const ANALYTICS_ORIGIN = 'https://plausible.io';
 
 export interface HeaderRule {
   readonly key: string;
@@ -19,61 +14,33 @@ export interface HeaderRule {
 }
 
 /**
- * The token the post-build step replaces with the real hashes.
+ * The part of the policy that has to travel as a header.
  *
- * `headers()` runs before any page is rendered, so a build cannot know the
- * hashes of its own output. Rather than build twice and hope the host serves
- * the second pass, the policy ships a placeholder and
- * `scripts/generate-csp.mjs` rewrites it in `.next/routes-manifest.json` —
- * the file both `next start` and the host read to build their routing.
+ * Everything else is delivered per page in a `<meta http-equiv>` tag, written
+ * by `scripts/generate-csp.mjs` after the build — see that file for the
+ * document policy and for why it is not here.
  *
- * The hashes therefore always come from the build that is actually deployed.
- * They cannot be committed: chunk filenames are content-hashed and differ
- * between build environments, so a list produced on one machine does not
- * match HTML produced on another. That was measured — every one of the 54
- * hashes differed between a local build and a CI build of the same commit.
+ * The split is forced by arithmetic. `script-src` has to name the SHA-256 hash
+ * of every inline script that may execute, and the host's build produces 649
+ * distinct inline scripts across 54 pages, or 35 KB of hashes. That is four
+ * times the host's limit on its whole routing configuration, so it cannot be a
+ * header at any amount of trimming. A page only ever executes its own scripts,
+ * though, so a per-page policy names a few dozen hashes instead of 649.
+ *
+ * What stays here is what a `<meta>` CSP is specified to ignore:
+ * `frame-ancestors`, `report-to` and `sandbox`. None of them take a hash, so
+ * none of them grow. `frame-ancestors` is the one in use.
+ *
+ * A nonce would collapse the problem to one value per page, and is still
+ * rejected — not for §2's sake, but because a per-request nonce makes every
+ * page dynamic and destroys the full static generation this project is built
+ * around.
  */
-export const CSP_HASH_PLACEHOLDER = "'sha256-REPLACED-AFTER-BUILD'";
-
 export function contentSecurityPolicy(): string {
-  return [
-    "default-src 'self'",
-    /*
-     * `'self'` covers the chunk files; the hashes cover the bootstrap and the
-     * per-page hydration payload. Nothing else may execute.
-     */
-    /*
-     * The analytics host is named here so that declining consent is the only
-     * thing that stops it loading. If CSP blocked it too, the consent gate
-     * would appear to work for the wrong reason and a regression in the gate
-     * would be invisible. One named host, no wildcard.
-     */
-    `script-src 'self' ${ANALYTICS_ORIGIN} ${CSP_HASH_PLACEHOLDER}`,
-    /*
-     * Tailwind emits a stylesheet, but `next/font` injects a small inline style
-     * block for the font-face declarations, and style hashes are brittle
-     * because the browser normalises CSS text. This is the one relaxation and
-     * it is limited to styles, which cannot execute.
-     */
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
-    "font-src 'self'",
-    `connect-src 'self' ${ANALYTICS_ORIGIN}`,
-    "form-action 'self'",
-    /* Both are set: `frame-ancestors` supersedes X-Frame-Options where honoured. */
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "object-src 'none'",
-    'upgrade-insecure-requests',
-  ].join('; ');
+  return ["frame-ancestors 'none'"].join('; ');
 }
 
-/**
- * The headers that are the same for every response.
- *
- * `frame-ancestors` and `report-uri` are ignored in a `<meta>` CSP, so the
- * policy is delivered as a header rather than as markup.
- */
+/** The headers that are the same for every response. */
 export function securityHeaders(): HeaderRule[] {
   return [
     { key: 'Content-Security-Policy', value: contentSecurityPolicy() },
