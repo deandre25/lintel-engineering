@@ -78,19 +78,20 @@ async function describe(dir) {
 let files = await htmlFiles(APP_DIR);
 
 /*
- * Fall back to scanning the whole build directory.
+ * Fall back to `.next/server`, and no wider.
  *
- * The first hosted build of this script found nothing at `.next/server/app`
- * and shipped an empty policy. Rather than assume one layout, look for
- * prerendered HTML anywhere under `.next`, skipping the incremental cache,
- * which holds copies of earlier renders and would contribute stale hashes.
+ * Scanning all of `.next` was tried and was wrong: it collected enough
+ * additional documents that the policy grew past the host's 32 KB limit on
+ * its routing configuration, and the build failed with an error that named
+ * neither this script nor the policy. The incremental cache is excluded
+ * because it holds copies of earlier renders whose hashes are stale.
  */
 if (files.length === 0) {
-  const everything = await htmlFiles(join(ROOT, '.next'));
-  files = everything.filter((file) => !file.includes(`${sep}cache${sep}`));
+  const serverFiles = await htmlFiles(join(ROOT, '.next', 'server'));
+  files = serverFiles.filter((file) => !file.includes(`${sep}cache${sep}`));
   if (files.length > 0) {
     console.warn(
-      `No HTML at ${APP_DIR}; found ${String(files.length)} prerendered pages elsewhere under .next.`,
+      `No HTML at ${APP_DIR}; using ${String(files.length)} pages found under .next/server.`,
     );
   }
 }
@@ -160,6 +161,29 @@ if (verifyOnly) {
 
   console.log(`CSP hashes verified: ${String(sorted.length)} inline scripts, unchanged.`);
   process.exit(0);
+}
+
+/*
+ * A policy that is too large is rejected by the host's routing configuration,
+ * which has a 32 KB ceiling across all of it. Failing here names the cause;
+ * failing there does not. The limit is set well below the ceiling because the
+ * policy is one entry among several.
+ */
+const headerBytes = sorted.map((hash) => `'${hash}'`).join(' ').length;
+const HEADER_LIMIT = 8_000;
+
+console.log(
+  `${String(files.length)} prerendered pages, ${String(sorted.length)} distinct inline scripts, ` +
+    `${String(headerBytes)} bytes of hashes.`,
+);
+
+if (headerBytes > HEADER_LIMIT) {
+  console.error(
+    `The hash list is ${String(headerBytes)} bytes, over the ${String(HEADER_LIMIT)} byte limit.\n` +
+      'Something is contributing documents that are not pages — check the list of\n' +
+      'directories scanned above rather than raising the limit.',
+  );
+  process.exit(1);
 }
 
 await writeFile(OUTPUT, `${JSON.stringify(sorted, null, 2)}\n`, 'utf8');
