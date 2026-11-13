@@ -30,7 +30,7 @@
 
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const APP_DIR = join(ROOT, '.next', 'server', 'app');
@@ -57,10 +57,52 @@ async function htmlFiles(dir) {
   return found;
 }
 
-const files = await htmlFiles(APP_DIR);
+/**
+ * Finds the prerendered HTML, wherever this build put it.
+ *
+ * `.next/server/app` is where it lands locally and on the GitHub runner. On
+ * the host it is empty, and the first three attempts at this all failed for
+ * that one reason. So the search widens in steps, narrowest first, and says
+ * which step found the pages — a build that silently hashes the wrong set is
+ * worse than one that fails.
+ *
+ * The incremental cache is always excluded: it holds copies of earlier
+ * renders, and hashing those contributed enough stale entries to push the
+ * policy past the host's 32 KB limit on its whole routing configuration.
+ */
+async function findPrerenderedHtml() {
+  const notCached = (paths) => paths.filter((file) => !file.includes(`${sep}cache${sep}`));
+
+  for (const [label, dir] of [
+    ['.next/server/app', APP_DIR],
+    ['.next/server', join(ROOT, '.next', 'server')],
+    ['.next', join(ROOT, '.next')],
+  ]) {
+    const found = notCached(await htmlFiles(dir));
+    if (found.length > 0) {
+      console.log(`Found ${String(found.length)} prerendered pages under ${label}.`);
+      return found;
+    }
+  }
+
+  return [];
+}
+
+const files = await findPrerenderedHtml();
 
 if (files.length === 0) {
-  console.error(`No prerendered HTML under ${APP_DIR}. Nothing to hash.`);
+  console.error(`No prerendered HTML anywhere under ${join(ROOT, '.next')}. Nothing to hash.`);
+  console.error(`  cwd: ${process.cwd()}`);
+  for (const dir of ['.next', '.next/server', '.next/server/app']) {
+    try {
+      const entries = await readdir(join(ROOT, dir));
+      console.error(
+        `  ${dir}: ${String(entries.length)} entries — ${entries.slice(0, 10).join(' ')}`,
+      );
+    } catch (error) {
+      console.error(`  ${dir}: unreadable (${error instanceof Error ? error.message : 'unknown'})`);
+    }
+  }
   process.exit(1);
 }
 
