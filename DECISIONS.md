@@ -785,7 +785,11 @@ are recorded rather than summarised.
 3. _Patch the routing manifest after the build._ Correct in principle — the
    hashes come from the build being deployed — but the host's list is 649
    distinct hashes, 35,045 bytes, against a 32,768-byte limit on its entire
-   routing configuration. Not a trimming problem.
+   routing configuration. Not a trimming problem. (The build script's own
+   guard was set lower, at 8,000 bytes, so that an oversized policy failed in
+   the script with a message naming the cause rather than being rejected by
+   the host with one that named neither. That guard is what reported the
+   35,045.)
 4. _Per-page `<meta http-equiv>`._ Removed the size problem: 24 hashes and
    about 2.3 KB per page. It did not remove the staleness problem, and that
    is the finding.
