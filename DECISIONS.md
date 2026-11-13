@@ -741,3 +741,30 @@ brittle because browsers normalise CSS text. Styles cannot execute. A meta
 policy also cannot be enforced before the parser reaches it, which is why the
 tag is the first child of `<head>` and why the build fails if anything
 executable precedes it.
+
+## 2026-11-13 — The on-demand 404 is now outside the policy, not inside it
+
+Moving `script-src` into per-page markup fixed the blank 404 recorded above.
+It was not fixed by the policy learning to admit that page. It was fixed by
+the page ceasing to be covered.
+
+The localised 404 for an unmatched single-segment path is rendered on demand,
+so it is not one of the files the build injects a meta tag into. The old
+site-wide header named 54 hashes and not that page's, so its payload was
+blocked and the page came out blank. There is now no header `script-src` at
+all, so nothing blocks it and the page renders. The a11y test that asserted
+the defect with `test.fail()` turned red by passing, which is what that
+marker is for.
+
+The honest statement of the trade: every prerendered page is governed by a
+policy naming its own hashes, and the one page that is not a file is governed
+by nothing beyond `frame-ancestors`. That page reflects the requested path
+into its flight payload, which is the only attacker-influenced input in the
+project — mitigated by React's JSON escaping of that payload, not by CSP.
+
+Three ways to close it, none taken in this run: make the 404 a prerendered
+file so it receives a tag like every other page; add a narrow header policy
+that applies only where no meta tag will exist, which the host's routing
+cannot express by "is not a file"; or accept it. Recorded as open rather than
+silently improved, because the symptom disappearing is exactly what would
+stop anyone looking.

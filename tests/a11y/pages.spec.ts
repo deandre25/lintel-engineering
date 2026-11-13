@@ -119,13 +119,6 @@ test.describe('the 404', () => {
    * See DECISIONS.md, "The 404: a formal defect".
    */
   test('a path matching no route renders its content', async ({ page }) => {
-    /*
-     * Expected to fail. `test.fail()` rather than a red check, so the suite
-     * stays green while the defect stays asserted — and so this turns red the
-     * moment the behaviour changes, in either direction.
-     */
-    test.fail();
-
     const response = await page.goto('/no-locale-prefix-here');
     expect(response?.status()).toBe(404);
 
@@ -134,7 +127,16 @@ test.describe('the 404', () => {
     expect(sent).toContain('That page does not exist');
     expect(sent).toContain('Pagina aceasta nu există');
 
-    /* This is the assertion that fails, and is meant to. */
+    /*
+     * This used to fail. The page is rendered on demand, so it is not one of
+     * the files the build injects a policy into, and its inline payload was
+     * blocked by the site-wide header policy that did not name it. Moving
+     * `script-src` into per-page markup removed that header, so the payload
+     * now runs and the page renders.
+     *
+     * Worth being plain about: this was fixed by the page falling outside the
+     * policy, not by the policy admitting it. See DECISIONS.md.
+     */
     await expect(page.getByRole('heading', { name: 'That page does not exist' })).toBeVisible();
   });
 });
