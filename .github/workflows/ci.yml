@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The baseline workflow pushes with GITHUB_TOKEN, and a push made with that
+  # token deliberately does not start another workflow. Without this, a
+  # regenerated baseline never gets verified by the job it exists for.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
