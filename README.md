@@ -111,7 +111,9 @@ The head `hreflang` links and the sitemap's `xhtml:link` entries are generated f
 
 A nonce-based policy needs a fresh value per request, and therefore a runtime. On a statically generated site the inline scripts are known at build time, so the policy uses SHA-256 hashes instead.
 
-Two things made that work:
+**The hashes are computed by the build that gets deployed**, not committed ahead of it. `src/lib/securityHeaders.ts` emits a placeholder inside `script-src`; after `next build`, `scripts/generate-csp.mjs` hashes the prerendered HTML that build just produced and patches the real hashes into `.next/routes-manifest.json`. A list computed on a developer's machine and committed is only correct if the hosted build is byte-identical, and it is not — see finding 5 below.
+
+Three things made that work:
 
 - `generateBuildId` is derived from the commit. Next's default build id is random per build, which made every page's hydration payload — and therefore its hash — change on each build. A build that does not reproduce also makes "the deployed artefact was built from this commit" unverifiable, so this is recorded as a reproducibility decision, not a CSP detail.
 - `application/ld+json` blocks are excluded from the hash set. A script element whose type is not a JavaScript MIME type never reaches the CSP check, because the browser abandons it earlier when preparing the script. Including them would have meant 140 hashes and 8 KB of header instead of 54 and 3.4 KB.
@@ -139,7 +141,7 @@ Zero axe violations across every page template in both locales, checked in CI. B
 
 The project ran in eight phases against a written brief, with a review gate at the end of each. Implementation was AI-assisted — Claude Code, driven spec-first: specification, then plan, then tasks — with verification at every gate by the author. The brief, the gates and the review record are the reason the project has a `DECISIONS.md` with a dated entry for every non-obvious choice.
 
-The most useful thing to come out of it was not a feature. Four times, a defect survived a passing check because **the instrument was wrong, not the system**:
+The most useful thing to come out of it was not a feature. Five times, a defect survived a passing check because **the instrument was wrong, not the system**:
 
 **1. A silent edit that tests could not catch.** A string replacement in the button styles failed to match, because Prettier had already reflowed the source. The removal applied and the replacement did not, so for several minutes the buttons had no disabled styling at all. Found by screenshotting the page and reading the rendered class list rather than trusting the edit's result. The root cause recurred later in the same form, and was then fixed as a working practice: match against the file as it currently stands, and abort loudly on a miss instead of writing a no-op.
 
@@ -148,6 +150,8 @@ The most useful thing to come out of it was not a feature. Four times, a defect 
 **3. A performance delta that was a typography defect.** Romanian LCP measured consistently 150 ms slower than English — order-independent across five runs per locale, so not thermal drift. Two hypotheses were wrong. The cause: `document.fonts.check('17px "Hanken Grotesk"', 'ă')` returned `false`. Google places U+0102–0103 (Ă/ă) in the **`vietnamese`** subset, not `latin-ext`, so the face was never loading for that character and Romanian text was being set in two typefaces at once — Hanken Grotesk, plus the system sans for every `ă`. Half the site's content was mis-set, and 78 screenshots across 13 templates, 2 locales and 3 widths had not caught it: a single diacritic in a fallback face is below the resolution of visual review. The proof of cause was the cost of the fix — English rose from 758 ms to 919 ms while Romanian stayed at 913 ms. The delta did not disappear, it equalised.
 
 **4. A green pipeline that was never running.** Five of six pull requests had no checks at all, because the workflow filtered on pull requests into `main` and the phases were a chain. Separately, `actions/upload-artifact@v4` skips hidden files by default and `.next` begins with a dot, so the build artefact had never once uploaded — while the build job passed, because it logged a warning rather than an error. A pipeline that looks green because it did not run is worse than a red one.
+
+**5. A policy verified locally, and wrong in production.** Every CSP test passed against a local production build, and the deployed site had no working interactivity at all: nothing hydrated, because the served `script-src` named zero hashes. The cause was the one the hash approach is most exposed to — the hashes had been computed from a different build than the one being served. Confirmed by diffing the two hash lists in CI, where all 54 differed: chunk filenames are content-addressed per environment, so they appear inside the inline bootstrap, so every hash changes. The fix generates the policy during the deployed build rather than pinning environments to match. Four attempts at it failed for a single reason no local run could expose — on the host, the prerendered HTML is not where it is locally — which is why the script now searches in widening steps and logs which one found the pages. The lasting change is not the script but the check: `scripts/verify-deployment.mjs` runs against the live URL after every deploy and asserts the served policy names hashes, that no violation fires in a real browser, and that the consent control actually responds. It was written to reproduce this defect, it did, and it now blocks a release that would reintroduce it. A test suite that only ever runs against a build you made yourself cannot see this class of bug.
 
 ---
 
