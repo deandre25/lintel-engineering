@@ -3,7 +3,7 @@
 A bilingual (English / Romanian) corporate website for an engineering consultancy, built as a demonstration of production front-end practice: localised routing without middleware, a hand-built design system, hash-based CSP on a statically generated site, and a CI pipeline that fails the build on performance and accessibility regressions.
 
 **Live:** https://lintel-engineering.vercel.app
-**CI:** (https://github.com/deandre25/lintel-engineering/actions/workflows/ci.yml/badge.svg)]
+**CI:** (https://github.com/deandre25/lintel-engineering/actions/workflows/ci.yml/badge.svg)
 
 > Lintel Engineering is a fictional company. The staff, case studies, client engagements and registration numbers on this site are invented. The site exists as an engineering portfolio piece and is not a real business.
 
