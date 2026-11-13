@@ -28,7 +28,7 @@
 
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const APP_DIR = join(ROOT, '.next', 'server', 'app');
@@ -37,7 +37,13 @@ const OUTPUT = join(ROOT, 'csp-hashes.json');
 const verifyOnly = process.argv.includes('--verify');
 
 async function htmlFiles(dir) {
-  const entries = await readdir(dir, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
   const found = [];
 
   for (const entry of entries) {
@@ -49,9 +55,58 @@ async function htmlFiles(dir) {
   return found;
 }
 
+/**
+ * Describes what is actually on disk.
+ *
+ * Printed when no HTML is found, because the first failure of this script in a
+ * hosted build said only that there were no hashes, which does not say whether
+ * the build emitted nothing, emitted somewhere else, or ran in another
+ * directory. A diagnostic that names the path it looked in costs one round
+ * trip and saves several.
+ */
+async function describe(dir) {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    const dirs = entries.filter((e) => e.isDirectory()).map((e) => `${e.name}/`);
+    const files = entries.filter((e) => e.isFile()).map((e) => e.name);
+    return `${String(entries.length)} entries: ${[...dirs, ...files].slice(0, 12).join(' ')}`;
+  } catch (error) {
+    return `unreadable (${error instanceof Error ? error.message : String(error)})`;
+  }
+}
+
+let files = await htmlFiles(APP_DIR);
+
+/*
+ * Fall back to scanning the whole build directory.
+ *
+ * The first hosted build of this script found nothing at `.next/server/app`
+ * and shipped an empty policy. Rather than assume one layout, look for
+ * prerendered HTML anywhere under `.next`, skipping the incremental cache,
+ * which holds copies of earlier renders and would contribute stale hashes.
+ */
+if (files.length === 0) {
+  const everything = await htmlFiles(join(ROOT, '.next'));
+  files = everything.filter((file) => !file.includes(`${sep}cache${sep}`));
+  if (files.length > 0) {
+    console.warn(
+      `No HTML at ${APP_DIR}; found ${String(files.length)} prerendered pages elsewhere under .next.`,
+    );
+  }
+}
+
+if (files.length === 0) {
+  console.error('No prerendered HTML found. Looked in:');
+  console.error(`  ${APP_DIR}`);
+  console.error(`  cwd:            ${process.cwd()}`);
+  console.error(`  .next:          ${await describe(join(ROOT, '.next'))}`);
+  console.error(`  .next/server:   ${await describe(join(ROOT, '.next', 'server'))}`);
+  console.error(`  .next/server/app: ${await describe(APP_DIR)}`);
+}
+
 const hashes = new Set();
 
-for (const file of await htmlFiles(APP_DIR)) {
+for (const file of files) {
   const html = await readFile(file, 'utf8');
 
   for (const match of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {

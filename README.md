@@ -15,17 +15,17 @@ A bilingual (English / Romanian) corporate website for an engineering consultanc
 
 Lighthouse, mobile profile, throttled, median of five runs per locale, taken from `main`:
 
-| Locale | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `/en` | 100 | 100 | 100 | 100 | 919 ms | 0.000 | 47 ms |
-| `/ro` | 100 | 100 | 100 | 100 | 913 ms | 0.000 | 36 ms |
+| Locale | Performance | Accessibility | Best Practices | SEO | LCP    | CLS   | TBT   |
+| ------ | ----------- | ------------- | -------------- | --- | ------ | ----- | ----- |
+| `/en`  | 100         | 100           | 100            | 100 | 919 ms | 0.000 | 47 ms |
+| `/ro`  | 100         | 100           | 100            | 100 | 913 ms | 0.000 | 36 ms |
 
 First-load JavaScript, gzipped:
 
-| Route group | Size | Gate |
-| --- | --- | --- |
-| Home (`/en`, `/ro`) | 138.9 KB | 140 KB |
-| Service and content pages | 139.5 KB | 185 KB |
+| Route group                       | Size     | Gate   |
+| --------------------------------- | -------- | ------ |
+| Home (`/en`, `/ro`)               | 138.9 KB | 140 KB |
+| Service and content pages         | 139.5 KB | 185 KB |
 | Contact (`react-hook-form` + Zod) | 179.5 KB | 185 KB |
 
 Other figures:
@@ -46,22 +46,22 @@ Every figure above is enforced in CI. The build fails if Lighthouse drops below 
 
 ## Stack, and why
 
-| Concern | Choice | Reason |
-| --- | --- | --- |
-| Framework | Next.js 16 (App Router), fully static | The site has no server-side state. Every route is prerendered; nothing is fetched at request time. |
-| Language | TypeScript 6, `strict` + `noUncheckedIndexedAccess` | Type-aware linting is what enforces zero `any`. The TypeScript version is pinned below 6.1 because `typescript-eslint` requires it, and type-aware linting was worth more than the newer release. |
-| Styling | Tailwind 4, theme driven by CSS custom properties | Tailwind's default colour, type and spacing ramps are **cleared, not extended**, so no unconsidered default can reach the page. Every token has a single definition in `src/styles/tokens.css`. |
-| Components | Hand-written | No component library. Building the primitives was the point; installing them would have demonstrated nothing. |
-| i18n | `next-intl`, no middleware | See *Localised slugs without a runtime* below. |
-| Content | Typed modules and MDX, validated by Zod at build | A malformed content file fails the build rather than rendering blank. |
-| Forms | `react-hook-form` + Zod, one schema shared with the submit handler | Zod runs **jitless**: it normally compiles validators through `new Function`, which would require `script-src 'unsafe-eval'` and defeat the hash-based CSP. |
-| Unit tests | Vitest + React Testing Library | — |
-| Browser tests | Playwright + `@axe-core/playwright` | — |
-| CI | GitHub Actions, 6 jobs | — |
-| Performance gate | Lighthouse CI with assertions | A threshold that does not fail a build is a suggestion. |
-| Fonts | Instrument Serif + Hanken Grotesk via `next/font`, self-hosted | Subsets include `latin`, `latin-ext` **and `vietnamese`** — see the typography finding below. |
-| Analytics | Plausible, loaded only after consent | — |
-| Hosting | Vercel | — |
+| Concern          | Choice                                                             | Reason                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework        | Next.js 16 (App Router), fully static                              | The site has no server-side state. Every route is prerendered; nothing is fetched at request time.                                                                                                |
+| Language         | TypeScript 6, `strict` + `noUncheckedIndexedAccess`                | Type-aware linting is what enforces zero `any`. The TypeScript version is pinned below 6.1 because `typescript-eslint` requires it, and type-aware linting was worth more than the newer release. |
+| Styling          | Tailwind 4, theme driven by CSS custom properties                  | Tailwind's default colour, type and spacing ramps are **cleared, not extended**, so no unconsidered default can reach the page. Every token has a single definition in `src/styles/tokens.css`.   |
+| Components       | Hand-written                                                       | No component library. Building the primitives was the point; installing them would have demonstrated nothing.                                                                                     |
+| i18n             | `next-intl`, no middleware                                         | See _Localised slugs without a runtime_ below.                                                                                                                                                    |
+| Content          | Typed modules and MDX, validated by Zod at build                   | A malformed content file fails the build rather than rendering blank.                                                                                                                             |
+| Forms            | `react-hook-form` + Zod, one schema shared with the submit handler | Zod runs **jitless**: it normally compiles validators through `new Function`, which would require `script-src 'unsafe-eval'` and defeat the hash-based CSP.                                       |
+| Unit tests       | Vitest + React Testing Library                                     | —                                                                                                                                                                                                 |
+| Browser tests    | Playwright + `@axe-core/playwright`                                | —                                                                                                                                                                                                 |
+| CI               | GitHub Actions, 6 jobs                                             | —                                                                                                                                                                                                 |
+| Performance gate | Lighthouse CI with assertions                                      | A threshold that does not fail a build is a suggestion.                                                                                                                                           |
+| Fonts            | Instrument Serif + Hanken Grotesk via `next/font`, self-hosted     | Subsets include `latin`, `latin-ext` **and `vietnamese`** — see the typography finding below.                                                                                                     |
+| Analytics        | Plausible, loaded only after consent                               | —                                                                                                                                                                                                 |
+| Hosting          | Vercel                                                             | —                                                                                                                                                                                                 |
 
 ---
 
@@ -118,11 +118,11 @@ Two things made that work:
 
 The analytics host is **deliberately allowed** in the policy. If it were blocked, the cookie gate would appear to work for the wrong reason and a regression in the gate would be invisible. The consent test asserts on network requests, not on a flag:
 
-| Action | Requests to the analytics host |
-| --- | --- |
-| No choice made | 0 |
-| Reject all | 0, including after navigating to another page |
-| Accept all | 2 |
+| Action         | Requests to the analytics host                |
+| -------------- | --------------------------------------------- |
+| No choice made | 0                                             |
+| Reject all     | 0, including after navigating to another page |
+| Accept all     | 2                                             |
 
 ### Accessibility
 
@@ -143,7 +143,7 @@ The most useful thing to come out of it was not a feature. Four times, a defect 
 
 **1. A silent edit that tests could not catch.** A string replacement in the button styles failed to match, because Prettier had already reflowed the source. The removal applied and the replacement did not, so for several minutes the buttons had no disabled styling at all. Found by screenshotting the page and reading the rendered class list rather than trusting the edit's result. The root cause recurred later in the same form, and was then fixed as a working practice: match against the file as it currently stands, and abort loudly on a miss instead of writing a no-op.
 
-**2. `curl` reports the shell, not the page.** The 404 pages appeared to be missing `html lang` on both the localised and the global boundary. They were not. A 404 body arrives as an RSC payload and renders on the client, so `curl` sees only the shell. Verified in a browser, the picture was different: the localised 404 carries `lang`, only the global shell does not. The same tool is the *correct* instrument one phase later, for SEO, and for exactly the same reason — what matters there is precisely what a crawler sees without executing JavaScript.
+**2. `curl` reports the shell, not the page.** The 404 pages appeared to be missing `html lang` on both the localised and the global boundary. They were not. A 404 body arrives as an RSC payload and renders on the client, so `curl` sees only the shell. Verified in a browser, the picture was different: the localised 404 carries `lang`, only the global shell does not. The same tool is the _correct_ instrument one phase later, for SEO, and for exactly the same reason — what matters there is precisely what a crawler sees without executing JavaScript.
 
 **3. A performance delta that was a typography defect.** Romanian LCP measured consistently 150 ms slower than English — order-independent across five runs per locale, so not thermal drift. Two hypotheses were wrong. The cause: `document.fonts.check('17px "Hanken Grotesk"', 'ă')` returned `false`. Google places U+0102–0103 (Ă/ă) in the **`vietnamese`** subset, not `latin-ext`, so the face was never loading for that character and Romanian text was being set in two typefaces at once — Hanken Grotesk, plus the system sans for every `ă`. Half the site's content was mis-set, and 78 screenshots across 13 templates, 2 locales and 3 widths had not caught it: a single diacritic in a fallback face is below the resolution of visual review. The proof of cause was the cost of the fix — English rose from 758 ms to 919 ms while Romanian stayed at 913 ms. The delta did not disappear, it equalised.
 
@@ -193,7 +193,7 @@ Add an entry to `src/lib/routing.ts` and a content module per locale. The page, 
 - **Hash-based CSP rather than a nonce.** No runtime, no `unsafe-inline`, no `unsafe-eval`. Cost: paths with no valid locale prefix cannot be covered — see Known limitations.
 - **Two performance budgets rather than one.** The brief set the first-load budget for the landing page; the gate was applying it to all 50 routes, and the contact form legitimately exceeded it. The fix was to narrow the gate to the scope the brief specified, not to raise the number for everything.
 - **Each CI job builds for itself** rather than configuring the artefact upload to include hidden files. Fewer moving parts, no size limits, about 30 seconds per job.
-- **The Romanian version names the regulated roles it does not hold** — *verificator de proiecte atestat*, *expert tehnic atestat*, *auditor energetic autorizat*. Several Romanian terms for this kind of work are reserved by statute for state-attested roles, which the English equivalents are not. The Romanian therefore carries a sentence the English does not. That asymmetry is correct localisation, not drift.
+- **The Romanian version names the regulated roles it does not hold** — _verificator de proiecte atestat_, _expert tehnic atestat_, _auditor energetic autorizat_. Several Romanian terms for this kind of work are reserved by statute for state-attested roles, which the English equivalents are not. The Romanian therefore carries a sentence the English does not. That asymmetry is correct localisation, not drift.
 - **No photography anywhere.** All imagery is hand-authored SVG — isometric structural schematics, sections, contour and grid patterns. Stock photography is the fastest way to make a site look fake, and this also removes every licensing question.
 
 ---

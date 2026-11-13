@@ -4,10 +4,10 @@
 
 Both typefaces are served from this repository through `next/font`, self-hosted, with the `latin`, `latin-ext` and `vietnamese` subsets. The third is required for Romanian: Google places U+0102–0103 (Ă/ă) in the `vietnamese` subset rather than `latin-ext`.
 
-| Typeface | Designer | Licence |
-| --- | --- | --- |
+| Typeface         | Designer                                       | Licence                   |
+| ---------------- | ---------------------------------------------- | ------------------------- |
 | Instrument Serif | Instrument / Rodrigo Fuenzalida, Jordan Egstad | SIL Open Font License 1.1 |
-| Hanken Grotesk | Alfredo Marco Pradil | SIL Open Font License 1.1 |
+| Hanken Grotesk   | Alfredo Marco Pradil                           | SIL Open Font License 1.1 |
 
 The SIL Open Font License permits use, modification and redistribution, including in commercial work, provided the font files themselves are not sold on their own. Full text: <https://openfontlicense.org/>
 
@@ -19,25 +19,25 @@ All illustration in this project is hand-authored SVG, written as React componen
 
 The project is built on the following, each under its own licence as declared in its package metadata. This list covers the direct dependencies that shape the architecture; `package-lock.json` is the complete record.
 
-| Package | Licence | Use |
-| --- | --- | --- |
-| Next.js | MIT | Framework, App Router, static generation |
-| React | MIT | — |
-| TypeScript | Apache-2.0 | — |
-| Tailwind CSS | MIT | Styling, theme driven by CSS custom properties |
-| next-intl | MIT | Internationalisation |
-| `@next/mdx` | MIT | Articles |
-| react-hook-form | MIT | Contact form |
-| Zod | MIT | Schema validation, shared between client and submit handler |
-| Vitest | MIT | Unit tests |
-| React Testing Library | MIT | Unit tests |
-| Playwright | Apache-2.0 | End-to-end, accessibility and overflow tests |
-| `@axe-core/playwright` | MPL-2.0 | Accessibility assertions |
-| `@lhci/cli` | Apache-2.0 | Performance gate |
-| ESLint | MIT | — |
-| typescript-eslint | MIT | Type-aware linting |
-| Prettier | MIT | — |
-| lychee | Apache-2.0 / MIT | Link checking in CI |
+| Package                | Licence          | Use                                                         |
+| ---------------------- | ---------------- | ----------------------------------------------------------- |
+| Next.js                | MIT              | Framework, App Router, static generation                    |
+| React                  | MIT              | —                                                           |
+| TypeScript             | Apache-2.0       | —                                                           |
+| Tailwind CSS           | MIT              | Styling, theme driven by CSS custom properties              |
+| next-intl              | MIT              | Internationalisation                                        |
+| `@next/mdx`            | MIT              | Articles                                                    |
+| react-hook-form        | MIT              | Contact form                                                |
+| Zod                    | MIT              | Schema validation, shared between client and submit handler |
+| Vitest                 | MIT              | Unit tests                                                  |
+| React Testing Library  | MIT              | Unit tests                                                  |
+| Playwright             | Apache-2.0       | End-to-end, accessibility and overflow tests                |
+| `@axe-core/playwright` | MPL-2.0          | Accessibility assertions                                    |
+| `@lhci/cli`            | Apache-2.0       | Performance gate                                            |
+| ESLint                 | MIT              | —                                                           |
+| typescript-eslint      | MIT              | Type-aware linting                                          |
+| Prettier               | MIT              | —                                                           |
+| lychee                 | Apache-2.0 / MIT | Link checking in CI                                         |
 
 ## Standards and vocabularies
 
