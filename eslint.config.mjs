@@ -96,10 +96,15 @@ export default tseslint.config(
 
   /* Config and test files are not part of the shipped bundle. */
   {
-    files: ['**/*.config.{ts,mts,mjs,js}', 'tests/**/*.ts', '**/*.test.{ts,tsx}'],
+    files: ['**/*.config.{ts,mts,mjs,js}', 'tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-console': 'off',
+      /*
+       * A test fixture is markup under test, not navigation. Using next/link
+       * here would test the framework rather than the component.
+       */
+      '@next/next/no-html-link-for-pages': 'off',
     },
   },
 );
