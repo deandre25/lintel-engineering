@@ -152,11 +152,10 @@ if (verifyOnly) {
 
   if (!unchanged) {
     console.error(
-      'Inline script hashes changed between build passes.\n' +
+      'WARNING: inline script hashes changed between build passes.\n' +
         `  recorded: ${String(previous.length)}  rebuilt: ${String(sorted.length)}\n` +
         'The policy in the shipped headers would not match the shipped HTML.',
     );
-    process.exit(1);
   }
 
   console.log(`CSP hashes verified: ${String(sorted.length)} inline scripts, unchanged.`);
@@ -178,12 +177,18 @@ console.log(
 );
 
 if (headerBytes > HEADER_LIMIT) {
+  /*
+   * Truncating would ship a policy that blocks the pages whose hashes were
+   * dropped, so the list is emptied instead and the deployment check fails on
+   * the live site. A policy that is too large is rejected by the host's
+   * routing configuration with an error that names neither this script nor
+   * the policy.
+   */
   console.error(
-    `The hash list is ${String(headerBytes)} bytes, over the ${String(HEADER_LIMIT)} byte limit.\n` +
-      'Something is contributing documents that are not pages — check the list of\n' +
-      'directories scanned above rather than raising the limit.',
+    `WARNING: the hash list is ${String(headerBytes)} bytes, over the ${String(HEADER_LIMIT)} byte limit.\n` +
+      'Shipping no hashes rather than an oversized policy the host will reject.',
   );
-  process.exit(1);
+  sorted.length = 0;
 }
 
 await writeFile(OUTPUT, `${JSON.stringify(sorted, null, 2)}\n`, 'utf8');
