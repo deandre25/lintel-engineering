@@ -25,6 +25,15 @@ interface Params {
   slug: string;
 }
 
+/**
+ * Only the enumerated slugs exist. Without this, Next renders an unknown slug
+ * on demand to produce its 404, and a request-time hydration payload cannot be
+ * hashed at build time, so the Content-Security-Policy blocks it. With it, an
+ * unknown slug is answered from the prerendered 404 and the site stays fully
+ * static — which §2 requires anyway.
+ */
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return locales.flatMap((locale) => slugsFor(locale, 'service').map((slug) => ({ locale, slug })));
 }

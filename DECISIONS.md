@@ -423,176 +423,215 @@ not; and verify the result by grepping for the new text rather than trusting the
 exit code. The Phase 2 instance shipped a visual regression through a green test
 run, which is what makes this worth writing down rather than remembering.
 
-### 2026-11-11 — The 404: a formal defect with demonstrated zero user impact
+### 2026-11-12 — The 404: where §2 and §10 cannot both be satisfied
 
-There are two 404 boundaries, and only one is affected.
+Two boundaries, and only one is affected.
 
-**Paths under a valid locale** — a mistyped URL such as `/en/servces`, or an
-unknown slug that makes a page call `notFound()` — render through
-`[locale]/not-found.tsx` inside the locale layout. The document carries the
-correct `lang`, the header and the footer. There is no defect here. A catch-all
-at `[locale]/[...rest]` is what routes mistyped paths to this boundary rather
-than to the global one; it is the single route that is not prerendered, because
-the set of paths that do not exist cannot be enumerated, and it resolves no data
-and renders no content.
+**Any path under a valid locale** — a mistyped URL, or an unknown slug that
+makes a page call `notFound()` — is answered from the prerendered 404.
+`dynamicParams = false` on the three slug routes is what does that: without it
+Next renders an unknown slug on demand, and a request-time payload cannot be
+hashed. The page is CSP-clean, carries its full content, and has its own
+chrome.
 
-**Paths with no usable locale prefix** — `/garbage`, or an unknown locale such
-as `/de`. The root layout lives at `[locale]/layout.tsx`, which is what makes
-`locale` a typed root param and keeps every page static, so there is no root
-layout for Next to wrap the global boundary in. Next emits the `<html>` itself,
-without `lang`. Rendering an `<html>` in the component produces one nested
-inside another, and `experimental.globalNotFound` did not change the behaviour.
+**A path whose first segment is not a valid locale** — `/garbage`, `/de` — is
+the one page Next still renders per request. Its hydration payload embeds the
+requested path, so `/aaa` and `/zzz` produce different payloads and no
+build-time hash can cover them. Measured:
 
-This is a formal defect, not a compromise, and the evidence is in the markup:
-the page is bilingual and **every block carries its own `lang`**, so no text on
-it inherits language from the document. A screen reader is given the correct
-language for everything it reads. What is missing is the attribute the
-`html-has-lang` rule looks for, and nothing a user experiences.
+```
+/aaa                   len=9322   sha256-7io+gc8oL/ikzba5…
+/bbb-different-length  len=9410   sha256-r+CcpmrYJkXca4i9…
+/zzz                   len=9322   sha256-UtSwhi7sz+mNwB5w…
+```
 
-The scope is narrower still: a visitor only reaches this boundary through a
-broken inbound link or a typed URL with no valid locale, never through
-navigation within the site, because every in-site link is generated from the
-route registry.
+CSP blocks the script, React discards the server HTML, and the page renders
+blank. The status is 404 and 12 KB of correct bilingual HTML is sent, so a
+crawler — which runs no JavaScript — sees the page intact. Only a person who
+hand-types an invalid root path sees the blank render.
 
-The suite reflects this exactly. The locale 404 is asserted with no exclusion
-at all. The global one excludes one rule, `html-has-lang`, and asserts the
-per-block `lang` attributes in its place.
+**Why the alternatives were rejected.**
 
-Two ways to close it, neither taken: reintroduce `app/layout.tsx` as the root
-layout, which demotes `locale` from a root param and returns `getRequestConfig`
-to the deprecated `requestLocale`; or wait for `globalNotFound` to support a
-root layout that is a dynamic segment. Trading a working i18n setup for one
-attribute on one unreachable-by-navigation page is the wrong way round.
+`output: 'export'` would remove the per-request render entirely, and was
+built rather than reasoned about. It emits `out/ro/services` while
+`out/ro/servicii` is missing, because rewrites are not applied under export —
+so it costs the whole localised URL structure of §8, not just `headers()` and
+`redirects()`.
 
-Diagnosed with a browser rather than with `curl`: the 404 body arrives as an RSC
-payload and is rendered client-side, so `curl` sees only the shell and reports a
-missing `lang` on both boundaries. The first two readings of this were wrong for
-that reason.
+Capturing the hash of one fixed 404 URL fails its own precondition: the
+payload embeds the real path and a rewrite preserves the address bar, so the
+URLs stay distinct. It also needs a server inside the build.
 
-### 2026-11-11 — The header navigation moves to 1024px too
+`unsafe-inline` is the wrong escape **specifically here**. This is the only
+page on the site that reflects the requested URL back, which makes it the only
+attacker-controlled input in the project. Relaxing the policy there would
+activate a reflected-XSS vector in precisely the one place there is something
+to reflect.
 
-Screenshotting all thirteen templates at three widths in both locales found a
-5px horizontal scroll on **every Romanian page at 768px** and on no English
-page at any width. The cause was the header: Romanian navigation labels are
-longer, and the nav, locale switcher and contact button together overflowed the
-gutter by 5px.
+The test covering it is deliberately left failing, with the reason in the test
+file. **This means CI is red**, which conflicts with §1's requirement that the
+pipeline be green on `main`. That conflict is real and is for the client to
+resolve: either accept a red check that documents a known limitation, or mark
+the test as expected-to-fail so the suite stays green while still alerting if
+the behaviour ever changes.
 
-The fix is the same one the sections already had — the desktop navigation now
-appears at `lg` rather than `md`, so 768px uses the compact navigation like
-every other two-column layout on the site. The site now has one breakpoint
-story rather than two.
+The page itself carries its own wordmark, its own links to both locale homes
+and its own disclosure line, rather than inheriting the locale layout it
+renders outside of. A page that looks deliberately spare reads differently
+from one that looks truncated by a constraint.
 
-This is the second defect found only by looking at the middle width, after the
-hero at 768 in Phase 4. Both were invisible at 390 and 1440, and neither would
-have failed a test. The screenshot sweep is now scripted and asserts no
-horizontal overflow on any template at any width in either locale, which turns
-the check into something repeatable rather than something remembered.
+### 2026-11-12 — Font role tokens have to be re-declared wherever the font variables are
 
-### 2026-11-11 — The country's name is localised; the country code is not
+Giving the global 404 its own chrome produced a page set entirely in the system
+font, with no error anywhere.
 
-`company.ts` holds facts that do not change with language, but the name of a
-country is a word, and the Romanian pages were printing "Romania" where a
-Romanian reader expects "România". It is now a localised string like the
-positioning line, while `countryCode` stays a single `RO` because an ISO code
-is not language-dependent.
+`--font-sans` is declared in `tokens.css` at `:root` as
+`var(--font-hanken-grotesk), …`. Custom property substitution happens where a
+property is **declared**, not where it is used. The global 404 renders outside
+every layout, so the `next/font` variables are attached to its own wrapper
+rather than to `<html>`; at `:root` the referenced variable does not exist, the
+declaration resolves to nothing, and every descendant inherits that empty value.
 
-Found by reading the rendered Romanian contact page, not by a test. The address
-is assembled from `company.ts` in four places, all of which already knew their
-locale, so nothing else had to change.
+A `.font-scope` class in `globals.css` re-declares the two role tokens, and the
+wrapper carries it. Diagnosed by reading computed styles rather than by looking
+at the page — the rendered text was plausible enough that a screenshot did not
+call attention to itself.
 
-## Phase 5 — SEO
+## Phase 6 — Forms, consent, security
 
-### 2026-11-11 — Verifying a client-rendered application: `curl` gives you the shell, not the page
+### 2026-11-11 — CSP uses hashes, not nonces, and the build id had to be made deterministic
 
-The 404 diagnosis in Phase 4 was wrong twice for one reason. The page body
-arrived as an RSC payload and was rendered by the browser, so `curl` saw the
-document shell and nothing inside it, and reported a missing `lang` on both
-boundaries when only one was affected.
+§10 asks for a nonce-based policy. A nonce has to be generated per request and
+therefore needs a server runtime, which §2 forbids. On a site where every page
+is prerendered the inline scripts are known at build time, so hashes express
+the same guarantee without the runtime. There is no `unsafe-inline` and no
+`unsafe-eval` in `script-src`.
 
-**The rule: `curl` shows what the server sent, a browser shows what the user
-gets, and in a client-rendered application those are different documents.**
-Choosing between them is choosing which question is being asked:
+Measured first, before anything was written:
 
-| Question                                         | Instrument                                          |
-| ------------------------------------------------ | --------------------------------------------------- |
-| What does a user experience?                     | A browser, against the production build             |
-| What does a crawler that runs no JavaScript see? | `curl` or view-source, against the production build |
-| What does the application do once hydrated?      | A browser's inspector                               |
+|                           |                                                    |
+| ------------------------- | -------------------------------------------------- |
+| HTML files                | 52                                                 |
+| Executable inline scripts | 156                                                |
+| Distinct SHA-256 hashes   | 54 — two shared by all pages, 52 per-page payloads |
+| `script-src` hash list    | 2,915 bytes                                        |
+| Full CSP header           | ~3.4 KB                                            |
 
-The inversion matters in this phase. Everything SEO depends on — `hreflang`,
-canonical, JSON-LD, Open Graph tags — counts only if it is in the HTML the
-server sent. A tag that appears after hydration does not exist for a crawler.
-So Phase 5 is verified with `curl` against `.next/server/app/**/*.html`, for
-exactly the reason `curl` was the wrong tool for the 404.
+`application/ld+json` blocks are excluded: the browser never executes them, so
+`script-src` does not govern them. Counting them would have inflated the list
+from 54 to 140 and the header to 8 KB, close to where proxies start refusing.
 
-A finding that rests on a measurement is reported with the instrument that
-produced it. That is the part that would have caught this in the first report
-rather than the third.
+**The problem this surfaced.** Hashes are only knowable after a build, but
+`next.config.ts` builds its headers before any page is rendered. The build
+therefore runs twice — `build → generate → build → verify` — and `--verify`
+fails if the hashes moved between passes rather than assuming they did not.
 
-### 2026-11-11 — Two defects, both at the middle width, both locale-dependent
+On the first run it failed, correctly, and what it found is recorded separately
+below because it is not a CSP matter.
 
-The hero at 768 and the header overflow at 768 were each invisible at 390 and
-1440, and the second was invisible in English at every width. Width and locale
-are easy to test one at a time and easy to miss together.
+Verified in a browser, which is the right instrument for this question because
+a violation only exists at execution time: zero `securitypolicyviolation`
+events and zero page errors across eight pages in both locales, with the pages
+still interactive.
 
-The screenshot sweep now covers every template at three widths in both locales
-and asserts no horizontal overflow, which turns a manual find into a standing
-check rather than something to remember.
+**The one relaxation is `style-src 'unsafe-inline'`**, and it is deliberate.
+`next/font` injects an inline `@font-face` block, and style hashes are brittle
+because browsers normalise CSS text before hashing. Styles cannot execute, so
+the attack this would otherwise open is not script execution. It is recorded
+here rather than left to be noticed.
 
-### 2026-11-11 — `next/og` emits static PNGs; it was confirmed before the routes were written
+### 2026-11-12 — The build was not reproducible, and that is a defect in its own right
 
-§2 forbids a server runtime and `ImageResponse` renders per request by default,
-so the first thing built in this phase was one OG route with
-`generateStaticParams`, to check the build output before writing fourteen more.
+Two builds of identical source produced different HTML. Diffing the hydration
+payloads showed one difference: `"b":"kXOwUG9bq2AuLS0kVCX3j"` against
+`"b":"ueyFKKcOgb_37sgKl7Phe"`. That is Next's build id, generated randomly for
+every build and embedded in every page.
 
-It emits real files: `.next/server/app/en/opengraph-image.body` is
-`PNG image data, 1200 x 630, 8-bit/color RGBA`. Twenty-eight PNGs are produced
-at build time, one per page per locale, and no function runs to serve them.
+CSP is how this was noticed, but it is not what it affects. A build that does
+not reproduce cannot be verified by comparing artefacts, cannot be cached
+reliably by content, and makes "the deployed bundle is the one from this
+commit" a claim nobody can check. `generateBuildId` now derives the id from the
+commit — from `VERCEL_GIT_COMMIT_SHA` or `GITHUB_SHA` in CI, from
+`git rev-parse HEAD` locally, and from a constant where there is no git at all.
 
-The cards use the system sans rather than the site's display face.
-`ImageResponse` needs raw font bytes, and `next/font` keeps its copies under
-hashed names in the build output that source cannot address; committing a
-second copy of a font the site already ships would be a duplicate asset to keep
-in step. The layout, the rule and the lintel mark carry the brand instead.
+Chunk filenames are content-hashed independently, so cache busting never
+depended on this value.
 
-Satori lays out with flexbox only and rejects any element with more than one
-child that has no explicit `display`. Two such elements failed the build before
-the first PNG appeared, which is the kind of thing that is cheaper to meet on
-one route than on fifteen.
+`frame-ancestors` and `report-uri` are ignored in a `<meta>` CSP, so the policy
+is delivered as a response header. `X-Frame-Options: DENY` is set alongside
+`frame-ancestors 'none'` for agents that honour only the older header.
 
-### 2026-11-11 — Permanent redirects are 301, not Next's 308
+### 2026-11-12 — Zod runs jitless, because the policy has no `unsafe-eval`
 
-`permanent: true` emits 308, which preserves the request method. §9 asks for
-301 and, for navigational URLs that are only ever fetched with GET, 301 is also
-what every log analyser and SEO audit expects on a migration. The redirect
-rules therefore carry `statusCode: 301` rather than `permanent`.
+The form produced one CSP violation with `blockedURI: "eval"`. Zod v4 compiles
+validators with `new Function` by default, which needs
+`script-src 'unsafe-eval'` — the opposite of what hashing the inline scripts is
+for. `z.config({ jitless: true })` makes it interpret instead, and the
+violation goes. Set in `lib/contact.ts` rather than in the component, because
+the schema is shared with the submit handler and the setting has to hold
+wherever it runs.
 
-One exception is not ours: a trailing slash is stripped by Next's own
-`trailingSlash: false` handling, which answers 308 before any configured rule
-is reached. The destination is correct either way, so the explicit rule stays
-as a statement of intent and the test accepts either status.
+### 2026-11-12 — The analytics origin is named in the CSP so the consent gate can be tested
 
-The redirect from `/` to the default locale stays temporary (307): which locale
-is the default is a decision that can change, and a permanent redirect would
-outlive it in caches.
+`script-src` names `https://plausible.io`. Without it, CSP would block the
+analytics script regardless of consent, the gate would appear to work for the
+wrong reason, and a regression in the gate would be invisible. One named host,
+no wildcard, and the request still only happens after the category is accepted.
 
-### 2026-11-11 — JSON-LD is validated against the real vocabulary, in CI
+Verified on the network, not on a flag:
 
-§9 asks for every type to be validated against schema.org.
-`scripts/validate-jsonld.mjs` downloads the published vocabulary, reads every
-JSON-LD block out of the prerendered HTML, and checks three things per node:
-the type exists, every property exists, and every property is within its
-declared domain, following the type's supertype chain.
+|                | Requests to plausible.io                      |
+| -------------- | --------------------------------------------- |
+| No choice made | 0                                             |
+| Reject all     | 0, including after navigating to another page |
+| Accept all     | 2                                             |
 
-It reads the build output rather than a running server, for the reason recorded
-at the top of this phase: structured data that only appears after hydration does
-not exist for a crawler.
+### 2026-11-12 — Consent is read with `useSyncExternalStore`
 
-It earned its place on the first run by rejecting `availableLanguage` on
-`Service` — schema.org puts that property on `ContactPoint` and
-`ServiceChannel`. Twelve pages carried it. A reviewer checking one page by eye
-would have had to know the domain of that property to catch it.
+`document.cookie` is an external store. Reading it in an effect body and
+calling `setState` causes a cascading render, which React's own lint rule
+rejects. The hook subscribes to the consent event instead, and caches its
+snapshot against the raw cookie string because `getSnapshot` must return a
+stable reference or React re-renders without end.
 
-Shape is asserted in the unit suite; validity is asserted against the
-vocabulary in CI. Copying the vocabulary into a test would be copying something
-that drifts.
+The server snapshot is `null`, which is what keeps the banner out of the
+prerendered HTML and means the absence of a cookie is never read as consent.
+
+### 2026-11-12 — The time-to-submit rule is tested in the schema, not through the UI
+
+The e2e test for it was flaky and removed: filling a form with a driver already
+takes longer than the three-second threshold, so the condition could not be
+reproduced. The rule lives in the schema, which both the browser and the submit
+handler run, so that is where it is asserted — along with the honeypot, and the
+check that the anti-spam fields never reach the transport.
+
+### 2026-11-13 — The first-load budget is the landing page's, with a ceiling for the rest
+
+CI caught the contact page at 179.5 KB against a 140 KB gate. The cause is
+real and expected: that page ships react-hook-form, its resolver and Zod, and
+no other page pays for them.
+
+Re-reading §1, the budget it sets is specific — "First-load JS, **landing
+page**". The script had been applying it to all fifty routes, which is
+stricter than the brief and penalises a leaf page for a dependency it needs.
+
+Two figures now: 140 KB for `/en` and `/ro`, the pages a visitor arrives on and
+the ones Lighthouse measures; 185 KB as a ceiling for everything else, high
+enough for the form and low enough that a runaway import still fails the build.
+
+The gate was right to fire. Widening it to the brief's actual scope is the
+correct response; raising it for everything would not have been.
+
+### 2026-11-13 — CI never ran outside one machine until the artifact bug was fixed
+
+Both the link check and Lighthouse failed on every run with "Artifact not found
+for name: next-build", and the build job had logged a warning rather than an
+error: `actions/upload-artifact@v4` skips hidden files by default, and `.next`
+is a hidden directory, so nothing was ever uploaded.
+
+Each job now builds for itself. That costs about half a minute per job and
+removes the artifact entirely rather than configuring around its defaults.
+
+CI also only triggered on pull requests targeting `main`. The phases are a
+chain, so five of the six PRs targeted the previous phase and had no checks at
+all — the pipeline looked green because it had not run.

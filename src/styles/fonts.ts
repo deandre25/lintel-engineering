@@ -8,7 +8,14 @@ import { Hanken_Grotesk, Instrument_Serif } from 'next/font/google';
  * subset alone would fall back mid-word on half the site's content.
  */
 export const sans = Hanken_Grotesk({
-  subsets: ['latin', 'latin-ext'],
+  /*
+   * `vietnamese` is not a mistake. Google Fonts puts U+0102/U+0103 — Ă and ă,
+   * a core Romanian letter — in the Vietnamese subset rather than in
+   * latin-ext. Without it the browser finds no loaded face covering ă and
+   * renders that one letter from the system fallback, so Romanian body text
+   * is set in two typefaces at once. Verified with `document.fonts.check`.
+   */
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
   display: 'swap',
   variable: '--font-hanken-grotesk',
   preload: true,
@@ -17,6 +24,10 @@ export const sans = Hanken_Grotesk({
 });
 
 export const display = Instrument_Serif({
+  /*
+   * No `vietnamese` here: this face's latin-ext already covers ă, confirmed
+   * with `document.fonts.check`. Only Hanken Grotesk splits it out.
+   */
   subsets: ['latin', 'latin-ext'],
   weight: '400',
   display: 'swap',

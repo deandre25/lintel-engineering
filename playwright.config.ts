@@ -52,6 +52,12 @@ export default defineConfig({
   ],
 
   webServer: {
+    /*
+     * The analytics domain is set so the consent tests are meaningful: without
+     * it no analytics script exists and "declining prevents the request" would
+     * pass for the wrong reason.
+     */
+    env: { NEXT_PUBLIC_PLAUSIBLE_DOMAIN: 'lintel-engineering.com' },
     command: `npm run build && npx next start --port ${String(PORT)}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

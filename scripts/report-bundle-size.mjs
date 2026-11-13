@@ -23,6 +23,11 @@ const args = process.argv.slice(2);
 const asJson = args.includes('--json');
 const budgetIndex = args.indexOf('--budget-kb');
 const budgetKb = budgetIndex === -1 ? null : Number(args[budgetIndex + 1]);
+const landingIndex = args.indexOf('--landing-kb');
+const landingKb = landingIndex === -1 ? null : Number(args[landingIndex + 1]);
+
+/** The landing page, per locale. §1 sets its budget specifically. */
+const LANDING = new Set(['/en', '/ro']);
 
 /** Routes that are framework internals rather than pages a visitor can reach. */
 const INTERNAL = new Set(['_not-found', '_global-error']);
@@ -129,14 +134,45 @@ if (asJson) {
   }
 }
 
+/*
+ * Two budgets, because §1 sets one and it is specific: "First-load JS, landing
+ * page". The landing page is what a visitor arrives on and what Lighthouse
+ * measures, so it carries the tight figure. Every other route carries a
+ * ceiling instead — high enough for a leaf page that genuinely needs a
+ * dependency, low enough that a runaway import still fails the build.
+ *
+ * The contact page is the one route that uses the looser figure: it ships
+ * react-hook-form, its resolver and Zod, which the form needs and which no
+ * other page pays for.
+ */
+let failed = false;
+
+if (landingKb !== null && Number.isFinite(landingKb)) {
+  const over = results.filter(
+    (result) => LANDING.has(result.route) && result.gzipBytes / 1024 > landingKb,
+  );
+  if (over.length > 0) {
+    console.error(
+      `\nOver the ${landingKb} KB landing-page budget:\n` +
+        over.map((r) => `  ${r.route}: ${(r.gzipBytes / 1024).toFixed(1)} KB`).join('\n'),
+    );
+    failed = true;
+  } else {
+    console.log(`\nLanding pages within the ${landingKb} KB budget.`);
+  }
+}
+
 if (budgetKb !== null && Number.isFinite(budgetKb)) {
   const over = results.filter((result) => result.gzipBytes / 1024 > budgetKb);
   if (over.length > 0) {
     console.error(
-      `\nOver the ${budgetKb} KB first-load budget:\n` +
+      `\nOver the ${budgetKb} KB ceiling for all routes:\n` +
         over.map((r) => `  ${r.route}: ${(r.gzipBytes / 1024).toFixed(1)} KB`).join('\n'),
     );
-    process.exit(1);
+    failed = true;
+  } else {
+    console.log(`All ${results.length} routes within the ${budgetKb} KB ceiling.`);
   }
-  console.log(`\nAll ${results.length} routes within the ${budgetKb} KB first-load budget.`);
 }
+
+if (failed) process.exit(1);

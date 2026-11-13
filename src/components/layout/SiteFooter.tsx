@@ -1,5 +1,6 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 
+import { CookieSettingsButton } from '@/components/consent/CookieSettingsButton';
 import { Wordmark } from '@/components/layout/Wordmark';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
@@ -92,6 +93,9 @@ export async function SiteFooter({ locale }: SiteFooterProps) {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <CookieSettingsButton label={t('cookieSettings')} />
+                </li>
               </ul>
             </nav>
           </div>

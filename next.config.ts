@@ -1,8 +1,10 @@
 import createMDX from '@next/mdx';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { execSync } from 'node:child_process';
 
 import { canonicalLocaleRedirects, localisedRewrites } from './src/lib/rewrites';
 import { defaultLocale } from './src/lib/routing';
+import { securityHeaders } from './src/lib/securityHeaders';
 
 import type { NextConfig } from 'next';
 
@@ -17,6 +19,35 @@ const withMDX = createMDX({});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  /*
+   * A deterministic build id.
+   *
+   * Next generates a random one per build and embeds it in every page's
+   * hydration payload. That makes the payload differ between two builds of
+   * identical source, which breaks hash-based CSP: the hashes computed after
+   * the first pass no longer match the HTML produced by the second. Measured by
+   * diffing the payloads — they were identical apart from the id.
+   *
+   * The commit is used where there is one, so the id still changes when the
+   * content does; chunk filenames are content-hashed independently, so cache
+   * busting does not depend on this value.
+   */
+  generateBuildId() {
+    const fromCi = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA;
+    if (fromCi !== undefined && fromCi !== '') return Promise.resolve(fromCi.slice(0, 20));
+
+    try {
+      return Promise.resolve(
+        execSync('git rev-parse HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+          .trim()
+          .slice(0, 20),
+      );
+    } catch {
+      /* No git, no CI: a constant keeps the build reproducible, which is the point. */
+      return Promise.resolve('lintel-engineering');
+    }
+  },
 
   /* `md` is absent deliberately: articles are MDX so they can use components. */
   pageExtensions: ['ts', 'tsx', 'mdx'],
@@ -49,6 +80,12 @@ const nextConfig: NextConfig = {
    * are routing-table entries resolved before any function runs, which is what
    * keeps localised slugs compatible with the static-only constraint in §2.
    */
+  headers() {
+    return Promise.resolve([
+      { source: '/:path*', headers: securityHeaders().map((h) => ({ ...h })) },
+    ]);
+  },
+
   rewrites() {
     return Promise.resolve(localisedRewrites().map((rule) => ({ ...rule })));
   },

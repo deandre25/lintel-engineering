@@ -123,6 +123,23 @@
 }
 
 @layer base {
+  /*
+   * Re-declares the font role tokens wherever the `next/font` variables are
+   * attached below `:root`.
+   *
+   * `--font-sans` is declared in tokens.css at `:root` as
+   * `var(--font-hanken-grotesk), …`. Substitution happens where a property is
+   * declared, not where it is used, so if the font variables are attached
+   * further down the tree — as they are on the global 404, which renders
+   * outside every layout — the `:root` declaration resolves to nothing and
+   * every descendant inherits that empty value. The page then renders in the
+   * system font with no error anywhere.
+   */
+  .font-scope {
+    --font-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  }
+
   *,
   *::before,
   *::after {
