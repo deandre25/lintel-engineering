@@ -48,6 +48,24 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       /* Baselines are committed, so a missing one is a failure, not a pass. */
       ignoreSnapshots: false,
+      /*
+       * Baselines are stored per platform because they are not portable
+       * across one. Font rasterisation differs between macOS and the Linux
+       * runner, so a baseline taken on a laptop fails on CI for a reason that
+       * has nothing to do with the change under test. The gate runs on Linux,
+       * so the Linux baselines are the ones that gate; the macOS set exists
+       * for local work. Each is generated on the platform that reads it --
+       * the same rule the deployed CSP is generated under.
+       */
+      snapshotPathTemplate: '{testDir}/__screenshots__/{platform}/{arg}{ext}',
+      expect: {
+        /*
+         * A small tolerance, not a generous one. Antialiasing moves a handful
+         * of edge pixels between otherwise identical runs; 0.1% of the frame
+         * absorbs that without hiding a shifted element.
+         */
+        toHaveScreenshot: { maxDiffPixelRatio: 0.001, threshold: 0.2 },
+      },
     },
   ],
 
