@@ -13,31 +13,61 @@ export interface HeaderRule {
   readonly value: string;
 }
 
+/** The only third-party origin the site may talk to, and only after consent. */
+const ANALYTICS_ORIGIN = 'https://plausible.io';
+
 /**
- * The part of the policy that has to travel as a header.
+ * The policy, delivered as a header, with `'unsafe-inline'` on `script-src`.
  *
- * Everything else is delivered per page in a `<meta http-equiv>` tag, written
- * by `scripts/generate-csp.mjs` after the build — see that file for the
- * document policy and for why it is not here.
+ * This is a documented compromise, and the reasoning belongs next to it.
  *
- * The split is forced by arithmetic. `script-src` has to name the SHA-256 hash
- * of every inline script that may execute, and the host's build produces 649
- * distinct inline scripts across 54 pages, or 35 KB of hashes. That is four
- * times the host's limit on its whole routing configuration, so it cannot be a
- * header at any amount of trimming. A page only ever executes its own scripts,
- * though, so a per-page policy names a few dozen hashes instead of 649.
+ * A hash-based policy was built three different ways and none of them can
+ * work on this host. `script-src` has to name the hash of every inline script
+ * that may execute. The host serves these pages from a function and caches
+ * the result rather than serving the prerendered file: the file on disk holds
+ * 3 inline scripts, the response holds 24, because the streamed payload is
+ * flushed in different-sized chunks on each render. 649 distinct scripts
+ * across 54 pages is 35 KB of hashes, over four times the host's limit on its
+ * routing configuration — and even that list would be stale, because it is
+ * computed from bytes the host does not send. A per-page `<meta http-equiv>`
+ * removed the size problem and not the staleness one: the build injected the
+ * tag into the prerendered files, and the host served pages that never
+ * contained it.
  *
- * What stays here is what a `<meta>` CSP is specified to ignore:
- * `frame-ancestors`, `report-to` and `sandbox`. None of them take a hash, so
- * none of them grow. `frame-ancestors` is the one in use.
+ * A nonce would fix it with one value per page. It is still rejected, and not
+ * because §2 forbids a server runtime: a per-request nonce makes every page
+ * dynamic and destroys the full static generation that is this project's
+ * architectural centre.
  *
- * A nonce would collapse the problem to one value per page, and is still
- * rejected — not for §2's sake, but because a per-request nonce makes every
- * page dynamic and destroys the full static generation this project is built
- * around.
+ * What `'unsafe-inline'` costs: an injected `<script>` in the page would
+ * execute. What still stands between an attacker and that: `default-src
+ * 'self'` and no wildcard anywhere, so no external script may load; no
+ * `'unsafe-eval'`, so no string may become code; `object-src 'none'`,
+ * `base-uri 'self'` and `form-action 'self'`, so the classic bypasses are
+ * closed; and the site has one attacker-influenced input in total — the path
+ * reflected into the 404's payload, which React escapes as JSON. The policy
+ * is a second line of defence that is now shorter, not the only one.
+ *
+ * See DECISIONS.md for what was attempted and measured.
  */
 export function contentSecurityPolicy(): string {
-  return ["frame-ancestors 'none'"].join('; ');
+  return [
+    "default-src 'self'",
+    `script-src 'self' ${ANALYTICS_ORIGIN} 'unsafe-inline'`,
+    /*
+     * `next/font` injects an inline style block and style hashes are brittle
+     * because browsers normalise CSS text. Styles cannot execute.
+     */
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    `connect-src 'self' ${ANALYTICS_ORIGIN}`,
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    'upgrade-insecure-requests',
+  ].join('; ');
 }
 
 /** The headers that are the same for every response. */

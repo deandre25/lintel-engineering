@@ -768,3 +768,62 @@ that applies only where no meta tag will exist, which the host's routing
 cannot express by "is not a file"; or accept it. Recorded as open rather than
 silently improved, because the symptom disappearing is exactly what would
 stop anyone looking.
+
+## 2026-11-13 — `script-src 'unsafe-inline'`, as a documented compromise
+
+Hashes do not work on this host. Three implementations were built and
+measured before concluding it, and the measurements are the reason, so they
+are recorded rather than summarised.
+
+**What was tried.**
+
+1. _Build twice, read a generated file._ The deployed site served the first
+   pass's headers with an empty `script-src`. Nothing hydrated.
+2. _Commit the hash list._ CI diffed a local build against a CI build of the
+   same commit: all 54 hashes differed. Chunk filenames are content-addressed
+   and appear inside the payload being hashed.
+3. _Patch the routing manifest after the build._ Correct in principle — the
+   hashes come from the build being deployed — but the host's list is 649
+   distinct hashes, 35,045 bytes, against a 32,768-byte limit on its entire
+   routing configuration. Not a trimming problem.
+4. _Per-page `<meta http-equiv>`._ Removed the size problem: 24 hashes and
+   about 2.3 KB per page. It did not remove the staleness problem, and that
+   is the finding.
+
+**Why the meta tag failed, which is the fact that settles it.** The build
+injected a tag into every prerendered file and verified all 11 checks against
+a local server. Deployed, the live page carried the new header
+(`frame-ancestors 'none'`, which only the new code emits, so the build was
+live) and no meta tag at all. The served page has **24 inline executable
+scripts; the prerendered file on disk has 3**. Together with `age`,
+`x-matched-path` and `must-revalidate` on the response, the host is rendering
+these pages through a function and caching the result rather than serving the
+file the build produced. Nothing written into `.next` at build time reaches
+what is sent, and the streamed payload is flushed into different chunks on
+each render, so no hash computed anywhere at build time can match.
+
+**What ships.** `script-src 'self' https://plausible.io 'unsafe-inline'`.
+Every other directive is unchanged.
+
+**No nonce.** Not for §2's sake. A nonce must be fresh per request, which
+makes every page dynamic and destroys the full static generation that is this
+project's architectural centre. The omission is a choice, not an oversight.
+
+**Residual risk, stated plainly.** An injected `<script>` in a page would
+execute; that is what `'unsafe-inline'` means and there is no reading of it
+that is not a real reduction. What still holds: `default-src 'self'` with no
+wildcard anywhere, so no external script may load; no `'unsafe-eval'`, so no
+string becomes code; `object-src 'none'`, `base-uri 'self'` and `form-action
+'self'`, closing the usual bypasses; `frame-ancestors 'none'`; and the site
+has exactly one attacker-influenced input — the path reflected into the 404's
+flight payload, escaped as JSON by React. The site is fully static with no
+database, no user content and no authentication, so there is no stored
+injection path. CSP here is a second line of defence that is now shorter,
+not the only one.
+
+This is what nearly every real deployment of this stack does. The compromise
+is not the embarrassing part; an undocumented one would be.
+
+**What would change the decision.** A host that serves the prerendered files
+verbatim would make the per-page meta tag work as built — the code is in the
+history at `1151ca0` and the verification is in `verify-deployment.mjs`.

@@ -11,7 +11,7 @@
  *
  * So the checks here are deliberately behavioural and deliberately remote:
  *
- *   1. the policy served actually carries hashes;
+ *   1. the policy served is present and has not been widened;
  *   2. the browser reports no CSP violation;
  *   3. a control that needs JavaScript responds to a click.
  *
@@ -45,44 +45,26 @@ function check(ok, description, detail) {
 console.log(`Verifying ${origin}\n`);
 
 /*
- * 1. The served policy must name hashes, not just 'self'.
+ * 1. The served policy.
  *
- * `script-src` is delivered per page in a `<meta http-equiv>` tag rather than
- * as a header: the whole-site hash list is 35 KB, over four times what the
- * host will carry. So the hashes are read out of the markup, and the header
- * is checked only for what a meta policy cannot express.
+ * `script-src` carries `'unsafe-inline'`, which is a deliberate and recorded
+ * compromise — see src/lib/securityHeaders.ts. So this no longer asserts that
+ * hashes are present. What it does assert is everything that compromise is
+ * not allowed to widen into, plus the thing the original incident broke: that
+ * the page actually hydrates and responds.
  */
 const headResponse = await fetch(`${origin}/en`, { redirect: 'follow' });
-const header = headResponse.headers.get('content-security-policy') ?? '';
-const html = await headResponse.text();
-
-const metaMatch = /<meta http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html);
-const policy = metaMatch?.[1] ?? '';
-const hashCount = (policy.match(/'sha256-/g) ?? []).length;
+const policy = headResponse.headers.get('content-security-policy') ?? '';
 
 check(headResponse.status === 200, `GET /en responds 200`, `got ${String(headResponse.status)}`);
-check(policy !== '', 'the page carries a Content-Security-Policy meta tag');
-check(
-  /frame-ancestors/.test(header),
-  'the header carries the directives a meta tag ignores',
-  `header was ${header || '(absent)'}`,
-);
-check(
-  hashCount > 0,
-  'script-src names inline script hashes',
-  `found ${String(hashCount)}; an empty list blocks hydration entirely`,
-);
-/*
- * The meta tag has to precede every inline script, or the ones above it run
- * before any policy exists.
- */
-const firstInline = html.search(/<script(?![^>]*\ssrc=)(?![^>]*ld\+json)[^>]*>/);
-check(
-  metaMatch !== null && firstInline > -1 && html.indexOf(metaMatch[0]) < firstInline,
-  'the policy precedes every inline script',
-);
-check(!/script-src[^;]*unsafe-inline/.test(policy), "script-src does not contain 'unsafe-inline'");
-check(!/script-src[^;]*unsafe-eval/.test(policy), "script-src does not contain 'unsafe-eval'");
+check(policy !== '', 'a Content-Security-Policy header is present');
+check(/script-src/.test(policy), 'the policy constrains script-src at all');
+check(!/unsafe-eval/.test(policy), "the policy contains no 'unsafe-eval' anywhere");
+check(!/[\s;]\*|\*\s/.test(policy), 'the policy contains no wildcard source');
+check(/default-src 'self'/.test(policy), "default-src is 'self'");
+check(/object-src 'none'/.test(policy), "object-src is 'none'");
+check(/base-uri 'self'/.test(policy), "base-uri is 'self'");
+check(/frame-ancestors 'none'/.test(policy), "frame-ancestors is 'none'");
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -133,4 +115,4 @@ if (failures.length > 0) {
   console.error(`${String(failures.length)} check(s) failed on the deployed site.`);
   process.exit(1);
 }
-console.log('The deployed site serves a hashed policy and hydrates.');
+console.log('The deployed site serves its policy, hydrates, and responds.');

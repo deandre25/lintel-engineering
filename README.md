@@ -107,18 +107,24 @@ Instead, `src/lib/routing.ts` is the single owner of every path, and `next.confi
 
 The head `hreflang` links and the sitemap's `xhtml:link` entries are generated from the same function and cross-checked byte-for-byte, because two code paths emitting the same facts is a latent bug rather than a style preference.
 
-### Content-Security-Policy without nonces
+### Content-Security-Policy, and a compromise
 
-A nonce-based policy needs a fresh value per request, and therefore a runtime. On a statically generated site the inline scripts are known at build time, so the policy uses SHA-256 hashes instead.
+The site ships `script-src 'self' https://plausible.io 'unsafe-inline'`. Every other directive is tight: `default-src 'self'`, no wildcard source anywhere, no `'unsafe-eval'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`.
 
-**The policy ships as markup, per page, not as a header.** A header cannot carry it: `script-src` must name the hash of every inline script that may execute, and the host's build emits 1,158 inline scripts across 54 pages — 649 distinct, 35 KB of hashes, against a 32 KB limit on the host's entire routing configuration. A page only executes its own scripts, so `scripts/generate-csp.mjs` injects a `<meta http-equiv="Content-Security-Policy">` into each page's `<head>` after the build, naming that page's hashes alone: 417 bytes here, about 2.3 KB on the host. `frame-ancestors` stays in a header, because a meta policy ignores it and it takes no hashes.
+That is not what was intended. A hash-based policy was built three ways and measured each time:
 
-The hashes are computed from the exact bytes of the file they are written into. That matters more than it sounds: the same page has 3 inline scripts on this machine and about 21 on the host, because how the streamed payload is flushed is environment-dependent. Three earlier attempts — building twice, committing the list, patching the routing manifest — all failed because each compared one environment's output to another's. See finding 5 below.
+| Approach                                   | Why it failed                                                                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build twice, read a generated file         | The deployed site served the first pass's headers — empty `script-src`, nothing hydrated                                                                |
+| Commit the hash list                       | All 54 hashes differed between a local and a CI build of the same commit; chunk filenames are content-addressed and sit inside the payload being hashed |
+| Patch the routing manifest after the build | Correct in principle, but the host's list is 649 distinct hashes — 35 KB against a 32 KB limit on its whole routing configuration                       |
+| Per-page `<meta http-equiv>`               | Fixed the size (24 hashes, ~2.3 KB per page) and not the staleness                                                                                      |
 
-Two more things made that work:
+The last one is the finding. The build injected a tag into every prerendered file and passed all eleven checks against a local server. Deployed, the page carried the new header and **no meta tag** — and the served page has 24 inline scripts where the file on disk has 3. The host renders these pages through a function and caches the result rather than serving the file the build produced, so nothing written into `.next` reaches what is sent, and the streamed payload is chunked differently on every render. No hash computed at build time can match bytes the host generates at request time.
 
-- `generateBuildId` is derived from the commit. Next's default build id is random per build, which made every page's hydration payload — and therefore its hash — change on each build. A build that does not reproduce also makes "the deployed artefact was built from this commit" unverifiable, so this is recorded as a reproducibility decision, not a CSP detail.
-- `application/ld+json` blocks are excluded from the hash set. A script element whose type is not a JavaScript MIME type never reaches the CSP check, because the browser abandons it earlier when preparing the script. Including them would have meant 140 hashes and 8 KB of header instead of 54 and 3.4 KB.
+A nonce would solve it with one value per page, and is rejected on architectural grounds rather than §2's: a per-request nonce makes every page dynamic and destroys the full static generation this project is built around.
+
+What `'unsafe-inline'` costs and what still stands is written out in `DECISIONS.md`. Short version: it is a real reduction, no external script can load, no string can become code, and the site has exactly one attacker-influenced input — the path reflected into the 404's payload, escaped as JSON by React.
 
 The analytics host is **deliberately allowed** in the policy. If it were blocked, the cookie gate would appear to work for the wrong reason and a regression in the gate would be invisible. The consent test asserts on network requests, not on a flag:
 
