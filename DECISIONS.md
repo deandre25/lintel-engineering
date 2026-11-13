@@ -679,3 +679,65 @@ Found by a visual baseline, which is the instrument that catches it: the page
 returns 404 with valid markup and a correct `<title>`, so a status check and a
 `curl` both pass. Not yet confirmed against the host, which is currently
 challenging automated requests. Open.
+
+## 2026-11-13 — `script-src` moves from a header to a per-page meta tag
+
+A hash-based policy cannot be delivered as a header on this build. Measured
+on the host:
+
+|              | pages | inline scripts | distinct | bytes of hashes |
+| ------------ | ----- | -------------- | -------- | --------------- |
+| this machine | 52    | 156            | 54       | 2,915           |
+| the host     | 54    | 1,158          | 649      | 35,045          |
+
+The host's limit on its whole routing configuration is 32,768 bytes, and the
+policy alone is 35,045. That is not a trimming problem.
+
+**Why the two environments differ, since this is the fourth failure with the
+same root.** The inline script Next emits per page is the streamed flight
+payload, and how many `self.__next_f.push(...)` calls it is split into depends
+on how the prerender flushes — which is environment-dependent. This machine
+produces 3 inline scripts per page, the host around 21. Chunk filenames are
+also content-addressed and appear inside those payloads. So any approach that
+computes hashes in one environment and serves them in another is wrong before
+it starts: building twice, committing the list, and patching the routing
+manifest all failed for that single reason.
+
+The correction is not a better way to share a list between environments but
+to stop needing one. A page only executes its own scripts, so the policy is
+now injected into each page's `<head>` after the build, naming only that
+page's hashes — 417 bytes here, around 2.3 KB on the host. The hashes are
+computed from the exact bytes of the file they are written into.
+
+`frame-ancestors` stays in a header: a `<meta>` policy is specified to ignore
+it, along with `report-to` and `sandbox`. None of them take a hash, so the
+header does not grow.
+
+**Checked, because it would not announce itself.** An inline script above the
+meta tag executes before any policy exists — permissive, not blocking, so no
+violation is ever reported and nothing breaks. The injector fails the build
+and names the file if it finds one. The seven scripts in `<head>` all carry
+`src`, which `'self'` covers.
+
+**A correction to the record.** It was reasonable to read the old figure of 54
+as one entry per page, since the site has 54 prerendered pages. It was not
+that. The generator counted 156 inline scripts and reduced them to 54 because
+two of each page's three scripts — the Turbopack bootstrap and
+`(self.__next_f=self.__next_f||[]).push([0])` — are byte-identical site-wide:
+52 unique payloads plus 2 shared. The arithmetic is a coincidence. The list
+was correct for the build it was computed from and wrong for the build being
+served, which is the same defect either way, but the mechanism is
+environmental rather than a counting bug and the distinction decides where
+the fix goes.
+
+**No nonce**, and not because §2 forbids a server runtime. A nonce has to be
+fresh per request, which makes every page dynamic and destroys the full
+static generation that is this project's architectural centre. Recorded
+explicitly so the omission is not read as an oversight.
+
+**Residual risk.** `style-src` still carries `'unsafe-inline'`, unchanged and
+documented above: `next/font` injects a style block and style hashes are
+brittle because browsers normalise CSS text. Styles cannot execute. A meta
+policy also cannot be enforced before the parser reaches it, which is why the
+tag is the first child of `<head>` and why the build fails if anything
+executable precedes it.

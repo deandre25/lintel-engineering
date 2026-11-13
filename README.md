@@ -111,9 +111,11 @@ The head `hreflang` links and the sitemap's `xhtml:link` entries are generated f
 
 A nonce-based policy needs a fresh value per request, and therefore a runtime. On a statically generated site the inline scripts are known at build time, so the policy uses SHA-256 hashes instead.
 
-**The hashes are computed by the build that gets deployed**, not committed ahead of it. `src/lib/securityHeaders.ts` emits a placeholder inside `script-src`; after `next build`, `scripts/generate-csp.mjs` hashes the prerendered HTML that build just produced and patches the real hashes into `.next/routes-manifest.json`. A list computed on a developer's machine and committed is only correct if the hosted build is byte-identical, and it is not — see finding 5 below.
+**The policy ships as markup, per page, not as a header.** A header cannot carry it: `script-src` must name the hash of every inline script that may execute, and the host's build emits 1,158 inline scripts across 54 pages — 649 distinct, 35 KB of hashes, against a 32 KB limit on the host's entire routing configuration. A page only executes its own scripts, so `scripts/generate-csp.mjs` injects a `<meta http-equiv="Content-Security-Policy">` into each page's `<head>` after the build, naming that page's hashes alone: 417 bytes here, about 2.3 KB on the host. `frame-ancestors` stays in a header, because a meta policy ignores it and it takes no hashes.
 
-Three things made that work:
+The hashes are computed from the exact bytes of the file they are written into. That matters more than it sounds: the same page has 3 inline scripts on this machine and about 21 on the host, because how the streamed payload is flushed is environment-dependent. Three earlier attempts — building twice, committing the list, patching the routing manifest — all failed because each compared one environment's output to another's. See finding 5 below.
+
+Two more things made that work:
 
 - `generateBuildId` is derived from the commit. Next's default build id is random per build, which made every page's hydration payload — and therefore its hash — change on each build. A build that does not reproduce also makes "the deployed artefact was built from this commit" unverifiable, so this is recorded as a reproducibility decision, not a CSP detail.
 - `application/ld+json` blocks are excluded from the hash set. A script element whose type is not a JavaScript MIME type never reaches the CSP check, because the browser abandons it earlier when preparing the script. Including them would have meant 140 hashes and 8 KB of header instead of 54 and 3.4 KB.
