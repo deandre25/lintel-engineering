@@ -1,37 +1,66 @@
+# Regenerates the visual baselines on the platform that gates them.
+#
+# Playwright scopes snapshot paths by platform, and the scoping is not
+# cosmetic: font rasterisation and antialiasing differ between macOS and the
+# Linux runner, so a baseline taken on a laptop can never match here. The
+# Linux set therefore has to be produced on Linux, which is what this does.
+#
+# It is deliberately manual. Baselines are the reference a regression is
+# measured against, so regenerating them has to be a decision somebody makes,
+# not something that happens on a push and quietly agrees with whatever the
+# page looks like today.
 name: Update visual baselines
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 permissions:
   contents: write
 
 jobs:
-  update:
+  baselines:
+    name: Regenerate on Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22        # ← звір із ci.yml
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
 
-      - run: npx playwright install --with-deps chromium
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - run: npm run build       # ← прибери, якщо playwright.config сам підіймає сервер
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
+      # Playwright builds and serves the production output itself, configured
+      # in playwright.config.ts, so the baselines are taken from what deploys.
       - name: Regenerate baselines
         run: npx playwright test --project=visual --update-snapshots
-        continue-on-error: true
 
-      - name: Commit baselines
+      - name: Commit any change
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'deandre25'
+          git config user.email 'deyneka2003@gmail.com'
           git add tests/visual/__screenshots__
-          git diff --staged --quiet && echo "nothing to commit" && exit 0
-          git commit -m "test(visual): add linux baselines generated on the CI runner"
+          if git diff --cached --quiet; then
+            echo 'Baselines are unchanged. Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'test(visual): regenerate baselines on the Linux runner'
           git push
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline-report
+          path: playwright-report/
+          retention-days: 7
