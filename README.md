@@ -7,7 +7,7 @@ A bilingual (English / Romanian) corporate website for an engineering consultanc
 
 > Lintel Engineering is a fictional company. The staff, case studies, client engagements and registration numbers on this site are invented. The site exists as an engineering portfolio piece and is not a real business.
 
-[TODO: screenshot of the home page at desktop width]
+![Lintel Engineering](docs/home-desktop.png)
 
 ---
 

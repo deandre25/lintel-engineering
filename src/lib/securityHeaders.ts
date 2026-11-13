@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 /**
  * Security response headers (§10).
  *
@@ -22,36 +19,23 @@ export interface HeaderRule {
 }
 
 /**
- * Reads the hashes produced by `scripts/generate-csp.mjs`.
+ * The token the post-build step replaces with the real hashes.
  *
- * The file is committed. It has to be, because `headers()` runs before any
- * page is rendered, so a build cannot compute the hashes it needs for its own
- * headers. The two-pass build regenerates it, and the committed copy is what
- * makes the first pass — and a host that only ever runs one — correct.
+ * `headers()` runs before any page is rendered, so a build cannot know the
+ * hashes of its own output. Rather than build twice and hope the host serves
+ * the second pass, the policy ships a placeholder and
+ * `scripts/generate-csp.mjs` rewrites it in `.next/routes-manifest.json` —
+ * the file both `next start` and the host read to build their routing.
  *
- * Committing a generated file is only safe if it can be proved to match what
- * is actually served, and that proof is `scripts/verify-deployment.mjs`: it
- * loads the deployed URL in a browser and fails on any CSP violation. If a
- * hosted build ever produced different HTML, the hashes would stop matching
- * and that check would say so, against the real site rather than a local one.
+ * The hashes therefore always come from the build that is actually deployed.
+ * They cannot be committed: chunk filenames are content-hashed and differ
+ * between build environments, so a list produced on one machine does not
+ * match HTML produced on another. That was measured — every one of the 54
+ * hashes differed between a local build and a CI build of the same commit.
  */
-function inlineScriptHashes(): string[] {
-  try {
-    const raw = readFileSync(join(process.cwd(), 'csp-hashes.json'), 'utf8');
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === 'string')
-      : [];
-  } catch {
-    return [];
-  }
-}
+export const CSP_HASH_PLACEHOLDER = "'sha256-REPLACED-AFTER-BUILD'";
 
 export function contentSecurityPolicy(): string {
-  const hashes = inlineScriptHashes()
-    .map((hash) => `'${hash}'`)
-    .join(' ');
-
   return [
     "default-src 'self'",
     /*
@@ -64,7 +48,7 @@ export function contentSecurityPolicy(): string {
      * would appear to work for the wrong reason and a regression in the gate
      * would be invisible. One named host, no wildcard.
      */
-    `script-src 'self' ${ANALYTICS_ORIGIN} ${hashes}`.trim(),
+    `script-src 'self' ${ANALYTICS_ORIGIN} ${CSP_HASH_PLACEHOLDER}`,
     /*
      * Tailwind emits a stylesheet, but `next/font` injects a small inline style
      * block for the font-face declarations, and style hashes are brittle

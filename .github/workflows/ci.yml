@@ -88,11 +88,6 @@ jobs:
       - name: First-load JS budget
         run: npm run report:bundle
 
-      # The committed hash list must match what this build produced. If it
-      # does not, the policy shipped to the host would not match its HTML.
-      - name: CSP hashes are current
-        run: git diff --exit-code -- csp-hashes.json
-
       # Validates every JSON-LD block in the prerendered HTML against the real
       # schema.org vocabulary: unknown types, unknown properties, and properties
       # used outside their domain. It reads the build output rather than a

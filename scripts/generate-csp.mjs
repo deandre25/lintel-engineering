@@ -1,40 +1,44 @@
 #!/usr/bin/env node
 /**
- * Computes the SHA-256 hashes of every executable inline script in the build
- * output, so `script-src` can name them and the policy needs neither a nonce
- * nor `unsafe-inline`.
+ * Computes the SHA-256 hash of every executable inline script this build
+ * produced, and writes them into the policy the build will serve.
  *
- * Nonces require a per-request value and therefore a server runtime, which §2
- * forbids. On a statically generated site every inline script is known at build
- * time, so hashes are the correct mechanism.
+ * Nonces need a per-request value and therefore a server runtime, which §2
+ * forbids. On a prerendered site every inline script is known once the build
+ * has run, so hashes express the same guarantee without the runtime.
  *
- * Two kinds of `<script>` are skipped:
- *   - any with `src`, which is a same-origin file covered by `'self'`;
- *   - `type="application/ld+json"`, which the browser never executes and which
- *     `script-src` therefore does not govern.
+ * **Why this patches the manifest rather than building twice.** `headers()`
+ * is evaluated before any page is rendered, so a build cannot know the hashes
+ * of its own output. The first approach built twice and had the second pass
+ * read a generated file; the deployed site served the first pass's headers
+ * and shipped an empty `script-src`, so nothing hydrated. The second approach
+ * committed the hash list; CI then showed that all 54 hashes differ between a
+ * local build and a CI build of the same commit, because chunk filenames are
+ * content-hashed and vary by environment. Both failures have the same root:
+ * the hashes must come from the build being deployed, and nothing else.
  *
- * The hashes cannot be known when `next.config.ts` builds its headers, because
- * the pages have not been rendered yet. The build therefore runs twice:
+ * So `next.config.ts` emits a placeholder and this step replaces it in
+ * `.next/routes-manifest.json`, which is the file both `next start` and the
+ * host read to construct their routing. One build, hashes from its own HTML.
  *
- *   next build  →  generate-csp  →  next build  →  generate-csp --verify
+ * Two kinds of `<script>` are skipped: any with `src`, which is a same-origin
+ * file covered by `'self'`; and `type="application/ld+json"`, which the
+ * browser never executes and which `script-src` does not govern.
  *
- * The second pass picks the hashes up. Adding a response header does not change
- * the HTML, so the hashes are identical across the two passes; `--verify` is
- * what proves that rather than assuming it, and fails the build if a payload
- * moved.
- *
- * Usage: node scripts/generate-csp.mjs [--verify]
+ * Usage: node scripts/generate-csp.mjs
  */
 
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const APP_DIR = join(ROOT, '.next', 'server', 'app');
-const OUTPUT = join(ROOT, 'csp-hashes.json');
+const MANIFEST = join(ROOT, '.next', 'routes-manifest.json');
+const PLACEHOLDER = "'sha256-REPLACED-AFTER-BUILD'";
 
-const verifyOnly = process.argv.includes('--verify');
+/** Keeps the policy inside the host's limit on its whole routing config. */
+const HEADER_LIMIT = 8_000;
 
 async function htmlFiles(dir) {
   let entries;
@@ -45,64 +49,19 @@ async function htmlFiles(dir) {
   }
 
   const found = [];
-
   for (const entry of entries) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) found.push(...(await htmlFiles(path)));
     else if (entry.name.endsWith('.html')) found.push(path);
   }
-
   return found;
 }
 
-/**
- * Describes what is actually on disk.
- *
- * Printed when no HTML is found, because the first failure of this script in a
- * hosted build said only that there were no hashes, which does not say whether
- * the build emitted nothing, emitted somewhere else, or ran in another
- * directory. A diagnostic that names the path it looked in costs one round
- * trip and saves several.
- */
-async function describe(dir) {
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const dirs = entries.filter((e) => e.isDirectory()).map((e) => `${e.name}/`);
-    const files = entries.filter((e) => e.isFile()).map((e) => e.name);
-    return `${String(entries.length)} entries: ${[...dirs, ...files].slice(0, 12).join(' ')}`;
-  } catch (error) {
-    return `unreadable (${error instanceof Error ? error.message : String(error)})`;
-  }
-}
-
-let files = await htmlFiles(APP_DIR);
-
-/*
- * Fall back to `.next/server`, and no wider.
- *
- * Scanning all of `.next` was tried and was wrong: it collected enough
- * additional documents that the policy grew past the host's 32 KB limit on
- * its routing configuration, and the build failed with an error that named
- * neither this script nor the policy. The incremental cache is excluded
- * because it holds copies of earlier renders whose hashes are stale.
- */
-if (files.length === 0) {
-  const serverFiles = await htmlFiles(join(ROOT, '.next', 'server'));
-  files = serverFiles.filter((file) => !file.includes(`${sep}cache${sep}`));
-  if (files.length > 0) {
-    console.warn(
-      `No HTML at ${APP_DIR}; using ${String(files.length)} pages found under .next/server.`,
-    );
-  }
-}
+const files = await htmlFiles(APP_DIR);
 
 if (files.length === 0) {
-  console.error('No prerendered HTML found. Looked in:');
-  console.error(`  ${APP_DIR}`);
-  console.error(`  cwd:            ${process.cwd()}`);
-  console.error(`  .next:          ${await describe(join(ROOT, '.next'))}`);
-  console.error(`  .next/server:   ${await describe(join(ROOT, '.next', 'server'))}`);
-  console.error(`  .next/server/app: ${await describe(APP_DIR)}`);
+  console.error(`No prerendered HTML under ${APP_DIR}. Nothing to hash.`);
+  process.exit(1);
 }
 
 const hashes = new Set();
@@ -112,7 +71,6 @@ for (const file of files) {
 
   for (const match of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
     const [, attributes = '', body = ''] = match;
-
     if (/\ssrc=/.test(attributes)) continue;
     if (/type="application\/ld\+json"/.test(attributes)) continue;
 
@@ -121,78 +79,37 @@ for (const file of files) {
 }
 
 const sorted = [...hashes].sort();
-
-let previous = [];
-try {
-  previous = JSON.parse(await readFile(OUTPUT, 'utf8'));
-} catch {
-  previous = [];
-}
-
-const unchanged =
-  previous.length === sorted.length && previous.every((hash, index) => hash === sorted[index]);
-
-if (verifyOnly) {
-  /*
-   * An empty list means the policy shipped with no hashes and every inline
-   * script is blocked — the site renders and does not hydrate. That is what
-   * happened on the first deployment: the host ran `next build` directly
-   * rather than this package's two-pass script, so the file never existed
-   * when the headers were built. A green build and Lighthouse 100 were both
-   * true while nothing on the page worked, so this is now an error.
-   */
-  if (sorted.length === 0) {
-    console.error(
-      'No inline script hashes were found. The policy would ship with an empty\n' +
-        'script-src and nothing would hydrate. Check that the build ran this\n' +
-        "package's build script rather than `next build` directly.",
-    );
-    process.exit(1);
-  }
-
-  if (!unchanged) {
-    console.error(
-      'WARNING: inline script hashes changed between build passes.\n' +
-        `  recorded: ${String(previous.length)}  rebuilt: ${String(sorted.length)}\n` +
-        'The policy in the shipped headers would not match the shipped HTML.',
-    );
-  }
-
-  console.log(`CSP hashes verified: ${String(sorted.length)} inline scripts, unchanged.`);
-  process.exit(0);
-}
-
-/*
- * A policy that is too large is rejected by the host's routing configuration,
- * which has a 32 KB ceiling across all of it. Failing here names the cause;
- * failing there does not. The limit is set well below the ceiling because the
- * policy is one entry among several.
- */
-const headerBytes = sorted.map((hash) => `'${hash}'`).join(' ').length;
-const HEADER_LIMIT = 8_000;
+const replacement = sorted.map((hash) => `'${hash}'`).join(' ');
 
 console.log(
   `${String(files.length)} prerendered pages, ${String(sorted.length)} distinct inline scripts, ` +
-    `${String(headerBytes)} bytes of hashes.`,
+    `${String(replacement.length)} bytes of hashes.`,
 );
 
-if (headerBytes > HEADER_LIMIT) {
-  /*
-   * Truncating would ship a policy that blocks the pages whose hashes were
-   * dropped, so the list is emptied instead and the deployment check fails on
-   * the live site. A policy that is too large is rejected by the host's
-   * routing configuration with an error that names neither this script nor
-   * the policy.
-   */
-  console.error(
-    `WARNING: the hash list is ${String(headerBytes)} bytes, over the ${String(HEADER_LIMIT)} byte limit.\n` +
-      'Shipping no hashes rather than an oversized policy the host will reject.',
-  );
-  sorted.length = 0;
+if (sorted.length === 0) {
+  console.error('No inline scripts found. An empty script-src would block hydration entirely.');
+  process.exit(1);
 }
 
-await writeFile(OUTPUT, `${JSON.stringify(sorted, null, 2)}\n`, 'utf8');
-console.log(
-  `Wrote ${String(sorted.length)} inline script hashes to csp-hashes.json` +
-    (unchanged ? ' (unchanged).' : '.'),
-);
+if (replacement.length > HEADER_LIMIT) {
+  console.error(
+    `The hash list is ${String(replacement.length)} bytes, over the ${String(HEADER_LIMIT)} byte ` +
+      'limit. The host rejects an oversized routing config with an error that names neither ' +
+      'this script nor the policy, so it is failed here instead.',
+  );
+  process.exit(1);
+}
+
+const manifestText = await readFile(MANIFEST, 'utf8');
+
+if (!manifestText.includes(PLACEHOLDER)) {
+  console.error(
+    `The placeholder ${PLACEHOLDER} is not in ${MANIFEST}.\n` +
+      'Either the headers in next.config.ts no longer emit it, or this build did\n' +
+      'not produce the manifest. Refusing to ship a policy with no hashes.',
+  );
+  process.exit(1);
+}
+
+await writeFile(MANIFEST, manifestText.replaceAll(PLACEHOLDER, replacement), 'utf8');
+console.log(`Wrote ${String(sorted.length)} hashes into the routing manifest.`);

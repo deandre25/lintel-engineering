@@ -27,3 +27,4 @@ blob-report/
 .eslintcache
 *.tsbuildinfo
 .vercel
+csp-hashes.json
